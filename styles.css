@@ -392,8 +392,8 @@ button {
 }
 
 .admin-access {
-  padding: 10px 16px 18px;
-  color: rgba(86, 68, 54, 0.58);
+  padding: 12px 16px 20px;
+  color: rgba(86, 68, 54, 0.74);
   background: var(--page);
   font-size: 11px;
 }
@@ -409,6 +409,8 @@ button {
   cursor: pointer;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .admin-form,

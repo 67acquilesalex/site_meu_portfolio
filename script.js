@@ -38,7 +38,7 @@ if (siteFooter) {
   adminShell.setAttribute("aria-label", "Admin");
   adminShell.innerHTML = `
     <details>
-      <summary>Admin</summary>
+      <summary>Admin login</summary>
       <form class="admin-form" data-admin-login>
         <label>
           Login
