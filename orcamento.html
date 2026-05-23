@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orçamento | Seu Nome Fotografia</title>
+    <link rel="preconnect" href="https://images.unsplash.com" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="Voltar ao início">
+        <span class="brand-name">Seu Nome</span>
+        <span class="brand-subtitle">Fotografia</span>
+      </a>
+      <nav class="main-nav" aria-label="Navegação principal">
+        <a href="index.html">Home</a>
+        <a href="sobre.html">Sobre</a>
+        <a href="portfolio.html">Portfólio</a>
+        <a href="projetos.html">Projetos</a>
+        <a class="active" href="orcamento.html">Orçamento</a>
+        <a href="contato.html">Contato</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="quote-section quote-page" aria-labelledby="quote-title">
+        <img
+          class="quote-bg"
+          src="https://images.unsplash.com/photo-1494774157365-9e04c6720e47?auto=format&fit=crop&w=2300&q=88"
+          alt="Ensaio feminino em área externa clara"
+        />
+        <div class="quote-panel">
+          <h1 id="quote-title">Solicite seu orçamento:</h1>
+          <form class="quote-form" data-budget-form>
+            <label>
+              Nome
+              <input name="nome" type="text" autocomplete="name" required />
+            </label>
+
+            <label>
+              Telefone
+              <input name="telefone" type="tel" autocomplete="tel" required />
+            </label>
+
+            <label>
+              Email
+              <input name="email" type="email" autocomplete="email" required />
+            </label>
+
+            <label>
+              Data da sessão
+              <input name="data" type="date" />
+            </label>
+
+            <label>
+              Selecione o segmento
+              <select name="segmento" required>
+                <option value="">Escolha uma opção</option>
+                <option>Empresarial</option>
+                <option>Família</option>
+                <option>Gestante</option>
+                <option>Eventos</option>
+                <option>Outro</option>
+              </select>
+            </label>
+
+            <label>
+              Me conta um pouquinho mais sobre a sua necessidade.
+              <textarea name="mensagem" rows="5"></textarea>
+            </label>
+
+            <button class="form-button" type="submit">Enviar</button>
+            <p class="form-note">
+              O botão abre uma conversa no WhatsApp com as informações preenchidas.
+            </p>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Seu Nome Fotografia</span>
+      <span>Fotografia profissional com essência e leveza.</span>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
