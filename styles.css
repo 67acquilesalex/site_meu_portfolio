@@ -398,6 +398,27 @@ button {
   font-size: 12px;
 }
 
+.admin-launcher {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 1000;
+  min-height: 38px;
+  border: 1px solid rgba(86, 68, 54, 0.35);
+  padding: 0 16px;
+  color: var(--line);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 10px 24px rgba(86, 68, 54, 0.18);
+  cursor: pointer;
+  font: 700 12px/1 "Raleway", Helvetica, Arial, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-launcher:hover {
+  background: #fff;
+}
+
 .admin-access details {
   width: min(1040px, 100%);
   margin: 0 auto;

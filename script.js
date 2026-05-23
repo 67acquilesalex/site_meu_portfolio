@@ -379,10 +379,24 @@ if (siteFooter) {
 
   siteFooter.insertAdjacentElement("afterend", adminShell);
 
+  const adminLauncher = document.createElement("button");
+  adminLauncher.className = "admin-launcher";
+  adminLauncher.type = "button";
+  adminLauncher.textContent = "Admin";
+  adminLauncher.setAttribute("aria-label", "Open admin login");
+  document.body.append(adminLauncher);
+
   const adminForm = adminShell.querySelector("[data-admin-login]");
   const adminPanel = adminShell.querySelector("[data-admin-panel]");
   const adminMessage = adminShell.querySelector("[data-admin-message]");
   const adminLogout = adminShell.querySelector("[data-admin-logout]");
+  const adminDetails = adminShell.querySelector("details");
+
+  adminLauncher.addEventListener("click", () => {
+    adminDetails.open = true;
+    adminShell.scrollIntoView({ behavior: "smooth", block: "center" });
+    adminShell.querySelector("input")?.focus();
+  });
 
   const setAdminState = (isLoggedIn) => {
     adminForm.hidden = isLoggedIn;
