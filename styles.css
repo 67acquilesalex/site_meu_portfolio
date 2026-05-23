@@ -391,6 +391,73 @@ button {
   font-size: 12px;
 }
 
+.admin-access {
+  padding: 10px 16px 18px;
+  color: rgba(86, 68, 54, 0.58);
+  background: var(--page);
+  font-size: 11px;
+}
+
+.admin-access details {
+  width: min(360px, 100%);
+  margin: 0 auto;
+}
+
+.admin-access summary {
+  width: max-content;
+  margin: 0 auto;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-form,
+.admin-panel {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(86, 68, 54, 0.16);
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.admin-form[hidden],
+.admin-panel[hidden] {
+  display: none;
+}
+
+.admin-form label {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-form input {
+  min-height: 30px;
+  border: 1px solid rgba(86, 68, 54, 0.22);
+  padding: 0 8px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.72);
+  font: inherit;
+}
+
+.admin-form button,
+.admin-panel button {
+  justify-self: start;
+  min-height: 30px;
+  border: 1px solid rgba(86, 68, 54, 0.34);
+  padding: 0 12px;
+  color: var(--line);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.admin-message {
+  min-height: 14px;
+  margin: 0;
+  color: #8f3e31;
+}
+
 .section-wrap {
   width: min(var(--site-width), calc(100% - 32px));
   margin: 0 auto;
