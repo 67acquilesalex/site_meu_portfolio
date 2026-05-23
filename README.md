@@ -7,6 +7,10 @@ Site estatico pronto para publicar na Vercel, agora separado por paginas.
 - `index.html`: Home
 - `sobre.html`: Sobre
 - `portfolio.html`: Portfolio e galeria
+- `empresarial.html`: Fotos da categoria Empresarial
+- `familia.html`: Fotos da categoria Familia
+- `gestante.html`: Fotos da categoria Gestante
+- `eventos.html`: Fotos da categoria Eventos
 - `projetos.html`: Tipos de ensaio/projetos
 - `orcamento.html`: Formulario de orcamento
 - `contato.html`: Links de contato
