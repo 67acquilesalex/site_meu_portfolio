@@ -2,79 +2,115 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Portfólio | Seu Nome Fotografia</title>
-    <link rel="preconnect" href="https://images.unsplash.com" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Portfólio de fotografia da Mari Lopes Fotografia."
+    />
+    <meta property="og:title" content="Portfólio | marilopesfotografia" />
+    <meta property="og:type" content="website" />
+    <title>Portfólio | marilopesfotografia</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&family=Tangerine:wght@700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="site-header">
-      <a class="brand" href="index.html" aria-label="Voltar ao início">
-        <span class="brand-name">Seu Nome</span>
-        <span class="brand-subtitle">Fotografia</span>
-      </a>
-      <nav class="main-nav" aria-label="Navegação principal">
-        <a href="index.html">Home</a>
-        <a href="sobre.html">Sobre</a>
-        <a class="active" href="portfolio.html">Portfólio</a>
-        <a href="projetos.html">Projetos</a>
-        <a href="orcamento.html">Orçamento</a>
-        <a href="contato.html">Contato</a>
-      </nav>
+    <header class="site-header" aria-label="Cabeçalho">
+      <div class="site-frame header-frame">
+        <a class="brand" href="index.html" aria-label="Mari Lopes Fotografia">
+          <img
+            src="assets/marilopes/mari-lopes-logo.png"
+            alt="Mari Lopes"
+            width="239"
+            height="82"
+          />
+        </a>
+
+        <nav class="main-nav" aria-label="Site">
+          <a href="index.html">Home</a>
+          <a class="active" href="portfolio.html">Portfólio</a>
+          <div class="menu-group">
+            <a href="portfolio.html">Serviços</a>
+            <div class="submenu" aria-label="Serviços">
+              <a href="gestante.html">Gestante</a>
+              <a href="empresarial.html">Empresarial</a>
+              <a href="familia.html">Familia</a>
+              <a href="casal.html">Casal</a>
+              <a href="imoveis.html">Imóveis</a>
+              <a href="feminino.html">Feminino</a>
+            </div>
+          </div>
+          <a href="projetos.html">Projetos</a>
+          <a href="orcamento.html">Orçamento</a>
+          <div class="menu-group compact-more">
+            <button type="button" aria-label="Mais páginas">More</button>
+            <div class="submenu submenu-right" aria-label="Mais páginas">
+              <a href="contato.html">Contato</a>
+              <a href="reservas.html">Reservas</a>
+            </div>
+          </div>
+        </nav>
+
+        <a class="cart-link" href="#" aria-label="Carrinho com 0 itens">
+          <svg viewBox="0 0 197.7 166" aria-hidden="true">
+            <path d="M79.391 147.956c0-5.979-4.847-10.826-10.826-10.826s-10.826 4.847-10.826 10.826 4.847 10.826 10.826 10.826 10.826-4.847 10.826-10.826Zm7.218 0c0 9.965-8.079 18.044-18.044 18.044s-18.043-8.079-18.043-18.044 8.078-18.043 18.043-18.043 18.044 8.078 18.044 18.043Z" />
+            <path d="M144.348 147.956c0-5.979-4.847-10.826-10.826-10.826s-10.826 4.847-10.826 10.826 4.847 10.826 10.826 10.826 10.826-4.847 10.826-10.826Zm7.217 0c0 9.965-8.078 18.044-18.043 18.044s-18.044-8.079-18.044-18.044 8.079-18.043 18.044-18.043 18.043 8.078 18.043 18.043Z" />
+            <path d="M19.129 0c5.282.001 9.84 3.789 10.706 9.092h-.007l18.622 111.785c.865 5.188 5.427 9.036 10.664 9.036h78.016v7.217H59.114c-8.765 0-16.338-6.399-17.783-15.069L22.709 10.262v-.007c-.288-1.768-1.791-3.036-3.58-3.038H0V0h19.129Z" />
+            <path d="M158.783 84.156v-55.286H166v55.286c-.001 5.297-3.796 9.736-8.979 10.615l.007.014-116.705 20.566-1.255-7.104 116.705-20.574.035-.007c1.73-.289 2.974-1.745 2.975-3.51Z" />
+            <text x="95" y="25" text-anchor="middle" dy=".48em">0</text>
+          </svg>
+        </a>
+      </div>
     </header>
 
     <main>
-      <section class="portfolio section-wrap page-section" aria-labelledby="portfolio-title">
-        <div class="section-title">
-          <h1 id="portfolio-title">Portfólio</h1>
-          <p>Escolha uma categoria para navegar pelos trabalhos.</p>
-        </div>
-
-        <div class="portfolio-grid">
-          <a class="portfolio-card" href="empresarial.html">
-            <img
-              src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=900&q=85"
-              alt="Mulher em ambiente empresarial"
-            />
-            <span>Empresarial</span>
-          </a>
-          <a class="portfolio-card" href="familia.html">
-            <img
-              src="https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=900&q=85"
-              alt="Retrato de família com criança"
-            />
-            <span>Família</span>
-          </a>
-          <a class="portfolio-card" href="gestante.html">
-            <img
-              src="https://images.unsplash.com/photo-1495510096779-5fbe73258c83?auto=format&fit=crop&w=900&q=85"
-              alt="Gestante em ensaio externo"
-            />
-            <span>Gestante</span>
-          </a>
-          <a class="portfolio-card" href="eventos.html">
-            <img
-              src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=900&q=85"
-              alt="Decoração elegante de evento"
-            />
-            <span>Eventos</span>
-          </a>
+      <section class="quote-section" aria-label="Mensagem">
+        <div class="site-frame quote-frame">
+          <span class="quote-line"></span>
+          <h1>Cada sessão é um momento único e inesquecível</h1>
+          <span class="quote-line"></span>
         </div>
       </section>
 
-      <section class="masonry section-wrap" aria-label="Galeria de fotos">
-        <img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=85" alt="Retrato feminino em fundo claro" />
-        <img src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=900&q=85" alt="Casal de noivos em área externa" />
-        <img src="https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&w=900&q=85" alt="Buquê de noiva" />
-        <img src="https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&w=900&q=85" alt="Celebração em evento" />
-        <img src="https://images.unsplash.com/photo-1512316609839-ce289d3eba0a?auto=format&fit=crop&w=900&q=85" alt="Retrato feminino com luz suave" />
-        <img src="https://images.unsplash.com/photo-1494774157365-9e04c6720e47?auto=format&fit=crop&w=900&q=85" alt="Ensaio feminino externo" />
+      <section class="portfolio-gallery site-frame" aria-label="Portfólio">
+        <a class="gallery-item tall" href="gestante.html">
+          <img src="assets/marilopes/gestante.jpg" alt="Ensaio de gestante" />
+          <span>Ensaio de gestante</span>
+        </a>
+        <a class="gallery-item wide" href="imoveis.html">
+          <img src="assets/marilopes/imoveis.jpg" alt="Fotografia de imóveis" />
+          <span>Fotografia de imóveis</span>
+        </a>
+        <a class="gallery-item tall" href="feminino.html">
+          <img src="assets/marilopes/feminino.jpg" alt="Ensaio feminino" />
+          <span>Ensaio feminino</span>
+        </a>
+        <a class="gallery-item wide" href="casal.html">
+          <img src="assets/marilopes/casal.jpg" alt="Ensaio de casal" />
+          <span>Ensaio de casal</span>
+        </a>
+        <a class="gallery-item tall" href="empresarial.html">
+          <img src="assets/marilopes/empresarial.jpg" alt="Ensaio empresarial" />
+          <span>Ensaio empresarial</span>
+        </a>
+        <a class="gallery-item wide" href="familia.html">
+          <img src="assets/marilopes/familia.jpg" alt="Ensaio de família" />
+          <span>Ensaio de família</span>
+        </a>
       </section>
     </main>
 
     <footer class="site-footer">
-      <span>Seu Nome Fotografia</span>
-      <span>Fotografia profissional com essência e leveza.</span>
+      <div class="site-frame footer-frame">
+        <p>Mari Lopes Fotografia</p>
+        <p>Florianópolis - SC | marilopesfotografia@gmail.com</p>
+      </div>
     </footer>
+
+    <script src="script.js"></script>
   </body>
 </html>
