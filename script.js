@@ -397,7 +397,7 @@ if (siteFooter) {
 
   adminLauncher.addEventListener("click", () => {
     adminDetails.open = true;
-    adminShell.scrollIntoView({ behavior: "smooth", block: "center" });
+    adminShell.classList.add("is-open");
     adminShell.querySelector("input")?.focus();
   });
 
@@ -435,5 +435,6 @@ if (siteFooter) {
 
   adminLogout.addEventListener("click", () => {
     setAdminState(false);
+    adminShell.classList.remove("is-open");
   });
 }

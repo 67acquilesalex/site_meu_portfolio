@@ -392,14 +392,23 @@ button {
 }
 
 .admin-access {
-  padding: 14px 16px 22px;
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: none;
+  padding: 80px 16px 22px;
   color: #4f4a46;
-  background: #eee2d2;
+  background: rgba(44, 44, 43, 0.28);
   font-size: 12px;
+  overflow: auto;
+}
+
+.admin-access.is-open {
+  display: block;
 }
 
 .admin-launcher {
-  position: fixed;
+  position: fixed !important;
   right: 18px;
   bottom: 18px;
   z-index: 1000;
@@ -422,11 +431,15 @@ button {
 .admin-access details {
   width: min(1040px, 100%);
   margin: 0 auto;
+  background: #eee2d2;
+  border: 1px solid rgba(86, 68, 54, 0.24);
+  box-shadow: 0 24px 70px rgba(44, 44, 43, 0.24);
+  padding: 16px;
 }
 
 .admin-access summary {
   width: max-content;
-  margin: 0 auto;
+  margin: 0 0 12px;
   cursor: pointer;
   letter-spacing: 0.08em;
   text-transform: uppercase;
