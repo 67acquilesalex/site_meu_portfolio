@@ -350,40 +350,45 @@ const renderAdminWorkspace = (adminShell) => {
 
 applyContent();
 
-if (siteFooter) {
-  const adminShell = document.createElement("section");
-  adminShell.className = "admin-access";
-  adminShell.setAttribute("aria-label", "Admin");
-  adminShell.innerHTML = `
-    <details>
-      <summary>Admin login</summary>
-      <form class="admin-form" data-admin-login>
-        <label>
-          Login
-          <input name="login" type="text" autocomplete="username" />
-        </label>
-        <label>
-          Password
-          <input name="password" type="password" autocomplete="current-password" />
-        </label>
-        <button type="submit">Entrar</button>
-        <p class="admin-message" data-admin-message></p>
-      </form>
-      <div class="admin-panel" data-admin-panel hidden>
-        <div class="admin-panel-top">
-          <strong>Admin workspace</strong>
-          <span>Global album library. Local mock mode.</span>
-        </div>
-        <button type="button" data-admin-logout>Sair</button>
-      </div>
-    </details>
-  `;
+const siteFooter = document.querySelector(".site-footer");
 
-  siteFooter.insertAdjacentElement("afterend", adminShell);
+if (siteFooter) {
+  const existingAdminShell = document.querySelector("[data-admin-static]");
+  const adminShell = existingAdminShell || document.createElement("section");
+  if (!existingAdminShell) {
+    adminShell.className = "admin-access";
+    adminShell.setAttribute("aria-label", "Admin");
+    adminShell.innerHTML = `
+      <details>
+        <summary>Admin login</summary>
+        <form class="admin-form" data-admin-login>
+          <label>
+            Login
+            <input name="login" type="text" autocomplete="username" />
+          </label>
+          <label>
+            Password
+            <input name="password" type="password" autocomplete="current-password" />
+          </label>
+          <button type="submit">Entrar</button>
+          <p class="admin-message" data-admin-message></p>
+        </form>
+        <div class="admin-panel" data-admin-panel hidden>
+          <div class="admin-panel-top">
+            <strong>Admin workspace</strong>
+            <span>Global album library. Local mock mode.</span>
+          </div>
+          <button type="button" data-admin-logout>Sair</button>
+        </div>
+      </details>
+    `;
+
+    siteFooter.insertAdjacentElement("afterend", adminShell);
+  }
 
   const adminLauncher = document.querySelector("[data-admin-launcher]") || document.createElement("button");
   adminLauncher.className = "admin-launcher";
-  adminLauncher.type = "button";
+  if (adminLauncher.tagName === "BUTTON") adminLauncher.type = "button";
   adminLauncher.textContent = "Admin";
   adminLauncher.dataset.adminLauncher = "";
   adminLauncher.setAttribute("aria-label", "Open admin login");
@@ -394,8 +399,11 @@ if (siteFooter) {
   const adminMessage = adminShell.querySelector("[data-admin-message]");
   const adminLogout = adminShell.querySelector("[data-admin-logout]");
   const adminDetails = adminShell.querySelector("details");
+  const adminToggle = document.querySelector("#landing-admin-toggle");
 
-  adminLauncher.addEventListener("click", () => {
+  adminLauncher.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (adminToggle) adminToggle.checked = true;
     adminDetails.open = true;
     adminShell.classList.add("is-open");
     adminShell.querySelector("input")?.focus();
@@ -435,6 +443,7 @@ if (siteFooter) {
 
   adminLogout.addEventListener("click", () => {
     setAdminState(false);
+    if (adminToggle) adminToggle.checked = false;
     adminShell.classList.remove("is-open");
   });
 }

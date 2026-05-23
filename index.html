@@ -111,9 +111,34 @@
       </div>
     </footer>
 
-    <button class="admin-launcher" type="button" data-admin-launcher aria-label="Open admin login">
+    <input class="admin-toggle" id="landing-admin-toggle" type="checkbox" hidden />
+    <label class="admin-launcher" for="landing-admin-toggle" data-admin-launcher aria-label="Open admin login">
       Admin
-    </button>
+    </label>
+    <section class="admin-access admin-access-static" data-admin-static aria-label="Admin">
+      <details open>
+        <summary>Admin login</summary>
+        <form class="admin-form" data-admin-login>
+          <label>
+            Login
+            <input name="login" type="text" autocomplete="username" />
+          </label>
+          <label>
+            Password
+            <input name="password" type="password" autocomplete="current-password" />
+          </label>
+          <button type="submit">Entrar</button>
+          <p class="admin-message" data-admin-message></p>
+        </form>
+        <div class="admin-panel" data-admin-panel hidden>
+          <div class="admin-panel-top">
+            <strong>Admin workspace</strong>
+            <span>Global album library. Local mock mode.</span>
+          </div>
+          <button type="button" data-admin-logout>Sair</button>
+        </div>
+      </details>
+    </section>
 
     <script src="script.js"></script>
   </body>

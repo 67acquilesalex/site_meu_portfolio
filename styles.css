@@ -407,11 +407,22 @@ button {
   display: block;
 }
 
+.admin-toggle:checked + .admin-launcher + .admin-access-static,
+.admin-access-static.is-open {
+  display: block;
+}
+
+.admin-toggle:not(:checked) + .admin-launcher + .admin-access-static:not(.is-open) {
+  display: none;
+}
+
 .admin-launcher {
   position: fixed !important;
   right: 18px;
   bottom: 18px;
   z-index: 1000;
+  display: inline-grid;
+  place-items: center;
   min-height: 38px;
   border: 1px solid rgba(86, 68, 54, 0.35);
   padding: 0 16px;
