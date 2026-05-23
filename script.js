@@ -205,12 +205,12 @@ const renderInlineAdmin = () => {
     bar.className = "inline-admin-bar";
     bar.dataset.inlineAdmin = "";
     bar.innerHTML = `
-      <span>Portfolio albums</span>
+      <span>Albuns do portfolio</span>
       <label>
-        Upload album
+        Enviar album
         <input type="file" accept="image/*" data-upload-album />
       </label>
-      <button type="button" data-reset-content>Reset</button>
+      <button type="button" data-reset-content>Restaurar</button>
     `;
     gallery.before(bar);
 
@@ -221,10 +221,10 @@ const renderInlineAdmin = () => {
       controls.className = "inline-admin-card";
       controls.dataset.inlineAdmin = "";
       controls.innerHTML = `
-        <button type="button" data-album-action="toggle" data-index="${realIndex}">Hide</button>
-        <button type="button" data-album-action="up" data-index="${realIndex}">Up</button>
-        <button type="button" data-album-action="down" data-index="${realIndex}">Down</button>
-        <button type="button" data-album-action="remove" data-index="${realIndex}">Remove</button>
+        <button type="button" data-album-action="toggle" data-index="${realIndex}">Ocultar</button>
+        <button type="button" data-album-action="up" data-index="${realIndex}">Subir</button>
+        <button type="button" data-album-action="down" data-index="${realIndex}">Descer</button>
+        <button type="button" data-album-action="remove" data-index="${realIndex}">Remover</button>
       `;
       card.append(controls);
     });
@@ -240,9 +240,9 @@ const renderInlineAdmin = () => {
     bar.className = "inline-admin-bar";
     bar.dataset.inlineAdmin = "";
     bar.innerHTML = `
-      <span>${activeAlbum.title} photos</span>
+      <span>Fotos de ${activeAlbum.title}</span>
       <label>
-        Upload photo
+        Enviar foto
         <input type="file" accept="image/*" data-upload-photo="${activeAlbum.slug}" />
       </label>
     `;
@@ -255,10 +255,10 @@ const renderInlineAdmin = () => {
       controls.className = "inline-admin-card";
       controls.dataset.inlineAdmin = "";
       controls.innerHTML = `
-        <button type="button" data-photo-action="toggle" data-index="${realIndex}">Hide</button>
-        <button type="button" data-photo-action="up" data-index="${realIndex}">Up</button>
-        <button type="button" data-photo-action="down" data-index="${realIndex}">Down</button>
-        <button type="button" data-photo-action="remove" data-index="${realIndex}">Remove</button>
+        <button type="button" data-photo-action="toggle" data-index="${realIndex}">Ocultar</button>
+        <button type="button" data-photo-action="up" data-index="${realIndex}">Subir</button>
+        <button type="button" data-photo-action="down" data-index="${realIndex}">Descer</button>
+        <button type="button" data-photo-action="remove" data-index="${realIndex}">Remover</button>
       `;
       item.append(controls);
     });
@@ -316,7 +316,7 @@ document.addEventListener("change", async (event) => {
 
   if (albumInput?.files?.length) {
     const file = albumInput.files[0];
-    const title = prompt("Album name:", file.name.replace(/\.[^.]+$/, "")) || "New album";
+    const title = prompt("Nome do album:", file.name.replace(/\.[^.]+$/, "")) || "Novo album";
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `album-${Date.now()}`;
     const src = await fileToDataUrl(file);
     content.albums.push({
@@ -350,10 +350,10 @@ const renderAdminWorkspace = (adminShell) => {
   workspace.innerHTML = `
     <div class="mock-editor-title">
       <div>
-        <h3>Inline editing enabled</h3>
-        <p>Close this panel and use the controls on the albums and photos directly.</p>
+        <h3>Edicao inline ativada</h3>
+        <p>Feche este painel e use os controles diretamente nos albuns e fotos.</p>
       </div>
-      <span>Local draft saved</span>
+      <span>Rascunho local salvo</span>
     </div>
   `;
   adminShell.querySelector("[data-admin-panel]")?.append(workspace);
@@ -368,17 +368,17 @@ if (siteFooter) {
   const adminShell = existingAdminShell || document.createElement("section");
   if (!existingAdminShell) {
     adminShell.className = "admin-access";
-    adminShell.setAttribute("aria-label", "Admin");
+    adminShell.setAttribute("aria-label", "Administracao");
     adminShell.innerHTML = `
       <details>
-        <summary>Admin login</summary>
+        <summary>Login administrativo</summary>
         <form class="admin-form" data-admin-login>
           <label>
             Login
             <input name="login" type="text" autocomplete="username" />
           </label>
           <label>
-            Password
+            Senha
             <input name="password" type="password" autocomplete="current-password" />
           </label>
           <button type="submit">Entrar</button>
@@ -386,8 +386,8 @@ if (siteFooter) {
         </form>
         <div class="admin-panel" data-admin-panel hidden>
           <div class="admin-panel-top">
-            <strong>Admin workspace</strong>
-            <span>Global album library. Local mock mode.</span>
+            <strong>Edicao do site</strong>
+            <span>Biblioteca de albuns. Rascunho local.</span>
           </div>
           <button type="button" data-admin-logout>Sair</button>
         </div>
@@ -402,7 +402,7 @@ if (siteFooter) {
   if (adminLauncher.tagName === "BUTTON") adminLauncher.type = "button";
   adminLauncher.textContent = "Admin";
   adminLauncher.dataset.adminLauncher = "";
-  adminLauncher.setAttribute("aria-label", "Open admin login");
+  adminLauncher.setAttribute("aria-label", "Abrir login administrativo");
   if (!adminLauncher.isConnected) document.body.append(adminLauncher);
 
   const adminForm = adminShell.querySelector("[data-admin-login]");
