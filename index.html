@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Portfólio de fotografia profissional com ensaios, casamentos, eventos e retratos."
+    />
+    <meta property="og:title" content="Lumière Studio | Fotografia" />
+    <meta
+      property="og:description"
+      content="Fotografia elegante, natural e feita para guardar histórias reais."
+    />
+    <meta property="og:type" content="website" />
+    <title>Lumière Studio | Fotografia</title>
+    <link rel="preconnect" href="https://images.unsplash.com" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header" data-header>
+      <a class="brand" href="#inicio" aria-label="Voltar ao início">
+        <span class="brand-mark">LS</span>
+        <span>Lumière Studio</span>
+      </a>
+
+      <nav class="main-nav" aria-label="Navegação principal">
+        <a href="#portfolio">Portfólio</a>
+        <a href="#servicos">Serviços</a>
+        <a href="#sobre">Sobre</a>
+        <a href="#contato">Contato</a>
+      </nav>
+
+      <a class="header-action" href="#contato">Agendar ensaio</a>
+    </header>
+
+    <main>
+      <section class="hero" id="inicio" aria-labelledby="hero-title">
+        <img
+          class="hero-image"
+          src="https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=2200&q=85"
+          alt="Fotógrafa segurando uma câmera em ambiente com luz natural"
+        />
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+          <p class="eyebrow">Fotografia autoral e afetiva</p>
+          <h1 id="hero-title">Histórias reais com luz, silêncio e presença.</h1>
+          <p class="hero-copy">
+            Ensaios, casamentos e eventos fotografados com direção leve,
+            estética elegante e atenção aos detalhes que passam rápido.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#portfolio">Ver portfólio</a>
+            <a class="button button-secondary" href="#contato">Pedir orçamento</a>
+          </div>
+        </div>
+        <aside class="hero-card" aria-label="Destaques do estúdio">
+          <span>Manaus e região</span>
+          <strong>24h</strong>
+          <span>prévia editada para ensaios selecionados</span>
+        </aside>
+      </section>
+
+      <section class="intro section-wrap" aria-label="Diferenciais">
+        <div>
+          <span class="section-kicker">Direção sensível</span>
+          <h2>Um portfólio limpo para valorizar cada fotografia.</h2>
+        </div>
+        <p>
+          Este site foi criado para transmitir confiança logo no primeiro
+          contato: imagens grandes, navegação simples, textos objetivos e uma
+          jornada clara até o agendamento.
+        </p>
+      </section>
+
+      <section class="portfolio section-wrap" id="portfolio" aria-labelledby="portfolio-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Portfólio</span>
+            <h2 id="portfolio-title">Trabalhos selecionados</h2>
+          </div>
+          <div class="filter-controls" aria-label="Filtrar galeria">
+            <button class="filter-button active" type="button" data-filter="todos">Todos</button>
+            <button class="filter-button" type="button" data-filter="retratos">Retratos</button>
+            <button class="filter-button" type="button" data-filter="casamentos">Casamentos</button>
+            <button class="filter-button" type="button" data-filter="eventos">Eventos</button>
+          </div>
+        </div>
+
+        <div class="gallery-grid">
+          <article class="photo-card tall" data-category="retratos">
+            <img
+              src="https://images.unsplash.com/photo-1512316609839-ce289d3eba0a?auto=format&fit=crop&w=1200&q=85"
+              alt="Retrato feminino com luz suave"
+            />
+            <div>
+              <span>Retratos</span>
+              <h3>Ensaio editorial</h3>
+            </div>
+          </article>
+          <article class="photo-card" data-category="casamentos">
+            <img
+              src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=85"
+              alt="Casal de noivos caminhando ao ar livre"
+            />
+            <div>
+              <span>Casamentos</span>
+              <h3>Cerimônia intimista</h3>
+            </div>
+          </article>
+          <article class="photo-card wide" data-category="eventos">
+            <img
+              src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1400&q=85"
+              alt="Mesa de evento decorada com velas e flores"
+            />
+            <div>
+              <span>Eventos</span>
+              <h3>Recepção noturna</h3>
+            </div>
+          </article>
+          <article class="photo-card" data-category="retratos">
+            <img
+              src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=85"
+              alt="Retrato em estúdio com fundo claro"
+            />
+            <div>
+              <span>Retratos</span>
+              <h3>Luz de janela</h3>
+            </div>
+          </article>
+          <article class="photo-card" data-category="casamentos">
+            <img
+              src="https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&w=1200&q=85"
+              alt="Buquê de noiva com flores claras"
+            />
+            <div>
+              <span>Casamentos</span>
+              <h3>Detalhes da noiva</h3>
+            </div>
+          </article>
+          <article class="photo-card tall" data-category="eventos">
+            <img
+              src="https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&w=1200&q=85"
+              alt="Pessoas celebrando em evento com luzes"
+            />
+            <div>
+              <span>Eventos</span>
+              <h3>Celebração ao vivo</h3>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="services section-wrap" id="servicos" aria-labelledby="services-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Serviços</span>
+            <h2 id="services-title">Pacotes para momentos diferentes</h2>
+          </div>
+          <p>
+            Ajuste os nomes e valores quando definir seus pacotes finais.
+          </p>
+        </div>
+
+        <div class="service-grid">
+          <article class="service-item">
+            <span>01</span>
+            <h3>Ensaios individuais</h3>
+            <p>Direção leve para retratos profissionais, femininos, gestantes ou lifestyle.</p>
+          </article>
+          <article class="service-item">
+            <span>02</span>
+            <h3>Casamentos</h3>
+            <p>Cobertura completa da cerimônia, recepção, detalhes e momentos espontâneos.</p>
+          </article>
+          <article class="service-item">
+            <span>03</span>
+            <h3>Eventos</h3>
+            <p>Fotografia para aniversários, encontros corporativos, lançamentos e celebrações.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="about section-wrap" id="sobre" aria-labelledby="about-title">
+        <div class="about-media">
+          <img
+            src="https://images.unsplash.com/photo-1542038784456-1ea8e935640e?auto=format&fit=crop&w=1300&q=85"
+            alt="Câmera fotográfica sobre mesa de trabalho"
+          />
+        </div>
+        <div class="about-copy">
+          <span class="section-kicker">Sobre o estúdio</span>
+          <h2 id="about-title">Fotografia com acabamento premium e processo simples.</h2>
+          <p>
+            O atendimento começa entendendo o tipo de memória que você quer
+            guardar. A partir disso, cada ensaio recebe direção, escolha de luz,
+            edição consistente e entrega organizada em galeria digital.
+          </p>
+          <ul class="check-list">
+            <li>Galeria online para seleção e download</li>
+            <li>Tratamento de cor com identidade consistente</li>
+            <li>Orientação de locação, horário e figurino</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="testimonials section-wrap" aria-labelledby="testimonials-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Depoimentos</span>
+            <h2 id="testimonials-title">Experiências de clientes</h2>
+          </div>
+        </div>
+        <div class="testimonial-grid">
+          <blockquote>
+            <p>
+              "O ensaio ficou natural, elegante e exatamente como eu imaginava.
+              A direção durante as fotos deixou tudo mais fácil."
+            </p>
+            <cite>Marina A.</cite>
+          </blockquote>
+          <blockquote>
+            <p>
+              "Recebemos uma prévia linda e a galeria final veio organizada,
+              leve de acessar e com edição impecável."
+            </p>
+            <cite>Camila e Rafael</cite>
+          </blockquote>
+        </div>
+      </section>
+
+      <section class="contact section-wrap" id="contato" aria-labelledby="contact-title">
+        <div>
+          <span class="section-kicker">Contato</span>
+          <h2 id="contact-title">Vamos planejar suas fotos?</h2>
+          <p>
+            Envie uma mensagem com data, cidade e tipo de ensaio. Retornaremos
+            com disponibilidade, pacotes e próximos passos.
+          </p>
+        </div>
+        <div class="contact-panel">
+          <a class="button button-primary" href="https://wa.me/5592999999999" target="_blank" rel="noreferrer">
+            Chamar no WhatsApp
+          </a>
+          <a class="button button-outline" href="mailto:contato@lumierestudio.com">
+            contato@lumierestudio.com
+          </a>
+          <p>Troque o telefone e o e-mail pelos seus dados reais antes de publicar.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Lumière Studio</span>
+      <span>Fotografia profissional em Manaus</span>
+      <a href="#inicio">Voltar ao topo</a>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
