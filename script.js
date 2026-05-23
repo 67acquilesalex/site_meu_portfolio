@@ -108,14 +108,16 @@ const defaultAlbums = [
 ];
 
 const readContent = () => {
+  const cloneDefaults = () => JSON.parse(JSON.stringify(defaultAlbums));
+
   try {
     const stored = JSON.parse(localStorage.getItem(GLOBAL_CONTENT_KEY) || "null");
     if (stored?.albums?.length) return stored;
   } catch {
-    return { albums: structuredClone(defaultAlbums) };
+    return { albums: cloneDefaults() };
   }
 
-  return { albums: structuredClone(defaultAlbums) };
+  return { albums: cloneDefaults() };
 };
 
 const saveContent = (content) => {
@@ -379,12 +381,13 @@ if (siteFooter) {
 
   siteFooter.insertAdjacentElement("afterend", adminShell);
 
-  const adminLauncher = document.createElement("button");
+  const adminLauncher = document.querySelector("[data-admin-launcher]") || document.createElement("button");
   adminLauncher.className = "admin-launcher";
   adminLauncher.type = "button";
   adminLauncher.textContent = "Admin";
+  adminLauncher.dataset.adminLauncher = "";
   adminLauncher.setAttribute("aria-label", "Open admin login");
-  document.body.append(adminLauncher);
+  if (!adminLauncher.isConnected) document.body.append(adminLauncher);
 
   const adminForm = adminShell.querySelector("[data-admin-login]");
   const adminPanel = adminShell.querySelector("[data-admin-panel]");
