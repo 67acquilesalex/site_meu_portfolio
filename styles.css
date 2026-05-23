@@ -460,6 +460,97 @@ button {
   color: #8f3e31;
 }
 
+.mock-editor {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(86, 68, 54, 0.18);
+}
+
+.mock-editor h3 {
+  margin: 0;
+  color: var(--line);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mock-editor-section {
+  display: grid;
+  gap: 8px;
+}
+
+.mock-editor-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mock-editor-head strong {
+  color: var(--line);
+  font-size: 12px;
+}
+
+.mock-upload {
+  position: relative;
+  display: inline-grid;
+  min-height: 28px;
+  place-items: center;
+  border: 1px solid rgba(86, 68, 54, 0.34);
+  padding: 0 10px;
+  color: var(--line);
+  cursor: pointer;
+}
+
+.mock-upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.mock-editor-list {
+  display: grid;
+  gap: 6px;
+}
+
+.mock-editor-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(4, auto);
+  gap: 5px;
+  align-items: center;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.mock-editor-row span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mock-editor-row button,
+.mock-editor-reset {
+  min-height: 26px;
+  border: 1px solid rgba(86, 68, 54, 0.26);
+  padding: 0 7px;
+  color: var(--line);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.mock-editor-reset {
+  justify-self: start;
+  margin-top: 2px;
+}
+
 .section-wrap {
   width: min(var(--site-width), calc(100% - 32px));
   margin: 0 auto;
