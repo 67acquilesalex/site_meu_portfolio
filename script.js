@@ -1,3 +1,5 @@
+const GLOBAL_CONTENT_KEY = "portfolio-editor:global-content";
+
 document.querySelectorAll(".menu-group > button").forEach((button) => {
   button.addEventListener("click", () => {
     const group = button.closest(".menu-group");
@@ -15,12 +17,12 @@ if (budgetForm) {
 
     const formData = new FormData(budgetForm);
     const message = [
-      "Olá! Gostaria de solicitar um orçamento.",
+      "Ola! Gostaria de solicitar um orcamento.",
       "",
       `Nome: ${formData.get("nome") || ""}`,
       `Telefone: ${formData.get("telefone") || ""}`,
       `Email: ${formData.get("email") || ""}`,
-      `Data da sessão: ${formData.get("data") || "A definir"}`,
+      `Data da sessao: ${formData.get("data") || "A definir"}`,
       `Segmento: ${formData.get("segmento") || ""}`,
       `Mensagem: ${formData.get("mensagem") || ""}`,
     ].join("\n");
@@ -30,119 +32,134 @@ if (budgetForm) {
   });
 }
 
-const siteFooter = document.querySelector(".site-footer");
-const editorTargets = ".portfolio-gallery, .masonry, .project-grid";
+const defaultAlbums = [
+  {
+    slug: "gestante",
+    title: "Ensaio de gestante",
+    href: "gestante.html",
+    cover: "assets/marilopes/gestante.jpg",
+    hidden: false,
+    photos: [
+      { src: "assets/marilopes/gestante.jpg", alt: "Ensaio de gestante", hidden: false },
+      { src: "assets/marilopes/feminino.jpg", alt: "Retrato feminino", hidden: false },
+      { src: "assets/marilopes/casal.jpg", alt: "Ensaio externo", hidden: false },
+    ],
+  },
+  {
+    slug: "imoveis",
+    title: "Fotografia de imoveis",
+    href: "imoveis.html",
+    cover: "assets/marilopes/imoveis.jpg",
+    hidden: false,
+    photos: [
+      { src: "assets/marilopes/imoveis.jpg", alt: "Fotografia de imoveis", hidden: false },
+      { src: "assets/marilopes/familia.jpg", alt: "Ambiente natural", hidden: false },
+      { src: "assets/marilopes/casal.jpg", alt: "Detalhe externo", hidden: false },
+    ],
+  },
+  {
+    slug: "feminino",
+    title: "Ensaio feminino",
+    href: "feminino.html",
+    cover: "assets/marilopes/feminino.jpg",
+    hidden: false,
+    photos: [
+      { src: "assets/marilopes/feminino.jpg", alt: "Ensaio feminino", hidden: false },
+      { src: "assets/marilopes/empresarial.jpg", alt: "Retrato profissional", hidden: false },
+      { src: "assets/marilopes/gestante.jpg", alt: "Retrato em praia", hidden: false },
+    ],
+  },
+  {
+    slug: "casal",
+    title: "Ensaio de casal",
+    href: "casal.html",
+    cover: "assets/marilopes/casal.jpg",
+    hidden: false,
+    photos: [
+      { src: "assets/marilopes/casal.jpg", alt: "Ensaio de casal", hidden: false },
+      { src: "assets/marilopes/familia.jpg", alt: "Casal em natureza", hidden: false },
+      { src: "assets/marilopes/feminino.jpg", alt: "Retrato externo", hidden: false },
+    ],
+  },
+  {
+    slug: "empresarial",
+    title: "Ensaio empresarial",
+    href: "empresarial.html",
+    cover: "assets/marilopes/empresarial.jpg",
+    hidden: false,
+    photos: [
+      { src: "assets/marilopes/empresarial.jpg", alt: "Ensaio empresarial", hidden: false },
+      { src: "assets/marilopes/feminino.jpg", alt: "Retrato profissional", hidden: false },
+      { src: "assets/marilopes/imoveis.jpg", alt: "Ambiente comercial", hidden: false },
+    ],
+  },
+  {
+    slug: "familia",
+    title: "Ensaio de familia",
+    href: "familia.html",
+    cover: "assets/marilopes/familia.jpg",
+    hidden: false,
+    photos: [
+      { src: "assets/marilopes/familia.jpg", alt: "Ensaio de familia", hidden: false },
+      { src: "assets/marilopes/casal.jpg", alt: "Familia em ambiente natural", hidden: false },
+      { src: "assets/marilopes/gestante.jpg", alt: "Retrato familiar", hidden: false },
+    ],
+  },
+];
 
-const getEditorKey = () => `portfolio-editor:${location.pathname || "/index.html"}`;
-
-const getItemData = (item) => {
-  if (item.matches(".gallery-item")) {
-    return {
-      kind: "album",
-      tag: "a",
-      href: item.getAttribute("href") || "#",
-      title: item.querySelector("span")?.textContent?.trim() || "Album",
-      src: item.querySelector("img")?.getAttribute("src") || "",
-      alt: item.querySelector("img")?.getAttribute("alt") || "",
-      className: item.className,
-      hidden: item.hidden,
-    };
-  }
-
-  if (item.matches("img")) {
-    return {
-      kind: "photo",
-      tag: "img",
-      src: item.getAttribute("src") || "",
-      alt: item.getAttribute("alt") || "",
-      hidden: item.hidden,
-    };
-  }
-
-  return {
-    kind: "card",
-    tag: "article",
-    title: item.querySelector("h3")?.textContent?.trim() || "Item",
-    text: item.querySelector("p")?.textContent?.trim() || "",
-    hidden: item.hidden,
-  };
-};
-
-const createItemElement = (data) => {
-  if (data.tag === "a") {
-    const anchor = document.createElement("a");
-    anchor.className = data.className || "gallery-item wide";
-    anchor.href = data.href || "#";
-    anchor.hidden = Boolean(data.hidden);
-    anchor.innerHTML = `
-      <img src="${data.src}" alt="${data.alt || data.title || "Album"}" />
-      <span>${data.title || "Album"}</span>
-    `;
-    return anchor;
-  }
-
-  if (data.tag === "img") {
-    const image = document.createElement("img");
-    image.src = data.src;
-    image.alt = data.alt || "Foto";
-    image.hidden = Boolean(data.hidden);
-    return image;
-  }
-
-  const article = document.createElement("article");
-  article.hidden = Boolean(data.hidden);
-  article.innerHTML = `
-    <h3>${data.title || "Item"}</h3>
-    <p>${data.text || ""}</p>
-  `;
-  return article;
-};
-
-const getContainerItems = (container) => {
-  if (container.matches(".portfolio-gallery")) {
-    return [...container.querySelectorAll(":scope > .gallery-item")];
-  }
-
-  if (container.matches(".masonry")) {
-    return [...container.querySelectorAll(":scope > img")];
-  }
-
-  return [...container.children];
-};
-
-const readEditorState = () => {
+const readContent = () => {
   try {
-    return JSON.parse(localStorage.getItem(getEditorKey()) || "{}");
+    const stored = JSON.parse(localStorage.getItem(GLOBAL_CONTENT_KEY) || "null");
+    if (stored?.albums?.length) return stored;
   } catch {
-    return {};
+    return { albums: structuredClone(defaultAlbums) };
   }
+
+  return { albums: structuredClone(defaultAlbums) };
 };
 
-const writeEditorState = (state) => {
-  localStorage.setItem(getEditorKey(), JSON.stringify(state));
+const saveContent = (content) => {
+  localStorage.setItem(GLOBAL_CONTENT_KEY, JSON.stringify(content));
 };
 
-const applyEditorState = () => {
-  const state = readEditorState();
+const currentSlug = () => location.pathname.replace(/^\/|\.html$/g, "") || "index";
 
-  document.querySelectorAll(editorTargets).forEach((container, index) => {
-    const key = container.dataset.editorKey || `section-${index}`;
-    container.dataset.editorKey = key;
-    const items = state[key];
-    if (!Array.isArray(items)) return;
+const albumCard = (album, index) => {
+  const item = document.createElement("a");
+  item.className = `gallery-item ${index % 2 ? "wide" : "tall"}`;
+  item.href = album.href;
+  item.innerHTML = `
+    <img src="${album.cover}" alt="${album.title}" />
+    <span>${album.title}</span>
+  `;
+  return item;
+};
 
-    container.replaceChildren(...items.map(createItemElement));
+const photoNode = (photo) => {
+  const image = document.createElement("img");
+  image.src = photo.src;
+  image.alt = photo.alt || "Foto";
+  return image;
+};
+
+const applyContent = () => {
+  const content = readContent();
+
+  document.querySelectorAll(".portfolio-gallery").forEach((gallery) => {
+    gallery.replaceChildren(
+      ...content.albums
+        .filter((album) => !album.hidden)
+        .map((album, index) => albumCard(album, index))
+    );
   });
-};
 
-const buildCurrentEditorState = () => {
-  const state = {};
-  document.querySelectorAll(editorTargets).forEach((container, index) => {
-    const key = container.dataset.editorKey || `section-${index}`;
-    container.dataset.editorKey = key;
-    state[key] = getContainerItems(container).map(getItemData);
-  });
-  return state;
+  const slug = currentSlug();
+  const album = content.albums.find((item) => item.slug === slug);
+  const categoryGallery = document.querySelector(".masonry.category-gallery");
+  if (album && categoryGallery) {
+    const photos = album.photos.filter((photo) => !photo.hidden);
+    categoryGallery.replaceChildren(...photos.map(photoNode));
+  }
 };
 
 const fileToDataUrl = (file) =>
@@ -153,137 +170,183 @@ const fileToDataUrl = (file) =>
     reader.readAsDataURL(file);
   });
 
-const renderMockEditor = (adminShell) => {
-  const existing = adminShell.querySelector("[data-mock-editor]");
-  existing?.remove();
-
-  const containers = [...document.querySelectorAll(editorTargets)];
-  if (!containers.length) return;
-
-  const state = buildCurrentEditorState();
-  const editor = document.createElement("div");
-  editor.className = "mock-editor";
-  editor.dataset.mockEditor = "";
-  editor.innerHTML = `<h3>Editor mock</h3>`;
-
-  containers.forEach((container, sectionIndex) => {
-    const key = container.dataset.editorKey || `section-${sectionIndex}`;
-    container.dataset.editorKey = key;
-    const section = document.createElement("section");
-    const sectionName = container.getAttribute("aria-label") || container.className || `Seção ${sectionIndex + 1}`;
-    section.className = "mock-editor-section";
-    section.innerHTML = `
-      <div class="mock-editor-head">
-        <strong>${sectionName}</strong>
-        <label class="mock-upload">
-          Upload
-          <input type="file" accept="image/*" data-upload="${key}" />
-        </label>
-      </div>
-      <div class="mock-editor-list" data-editor-list="${key}"></div>
-    `;
-
-    const list = section.querySelector("[data-editor-list]");
-    state[key].forEach((item, itemIndex) => {
-      const row = document.createElement("div");
-      row.className = "mock-editor-row";
-      row.innerHTML = `
-        <span>${item.title || item.alt || `Foto ${itemIndex + 1}`}</span>
-        <button type="button" data-action="toggle" data-key="${key}" data-index="${itemIndex}">
-          ${item.hidden ? "Mostrar" : "Ocultar"}
-        </button>
-        <button type="button" data-action="up" data-key="${key}" data-index="${itemIndex}">↑</button>
-        <button type="button" data-action="down" data-key="${key}" data-index="${itemIndex}">↓</button>
-        <button type="button" data-action="remove" data-key="${key}" data-index="${itemIndex}">Remover</button>
-      `;
-      list.append(row);
-    });
-
-    editor.append(section);
-  });
-
-  const reset = document.createElement("button");
-  reset.className = "mock-editor-reset";
-  reset.type = "button";
-  reset.textContent = "Resetar mock desta página";
-  reset.addEventListener("click", () => {
-    localStorage.removeItem(getEditorKey());
-    location.reload();
-  });
-  editor.append(reset);
-
-  editor.addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-action]");
-    if (!button) return;
-
-    const key = button.dataset.key;
-    const index = Number(button.dataset.index);
-    const action = button.dataset.action;
-    const items = state[key];
-    if (!items) return;
-
-    if (action === "toggle") {
-      items[index].hidden = !items[index].hidden;
-    }
-
-    if (action === "remove") {
-      items.splice(index, 1);
-    }
-
-    if (action === "up" && index > 0) {
-      [items[index - 1], items[index]] = [items[index], items[index - 1]];
-    }
-
-    if (action === "down" && index < items.length - 1) {
-      [items[index + 1], items[index]] = [items[index], items[index + 1]];
-    }
-
-    writeEditorState(state);
-    applyEditorState();
-    renderMockEditor(adminShell);
-  });
-
-  editor.addEventListener("change", async (event) => {
-    const input = event.target.closest("input[type='file'][data-upload]");
-    if (!input?.files?.length) return;
-
-    const key = input.dataset.upload;
-    const file = input.files[0];
-    const src = await fileToDataUrl(file);
-    const container = containers.find((item) => item.dataset.editorKey === key);
-    const isAlbumSection = container?.matches(".portfolio-gallery");
-    const title = isAlbumSection ? prompt("Nome do album:", file.name.replace(/\.[^.]+$/, "")) : "";
-
-    state[key].push(
-      isAlbumSection
-        ? {
-            kind: "album",
-            tag: "a",
-            href: "#",
-            title: title || "Novo album",
-            src,
-            alt: title || "Novo album",
-            className: "gallery-item wide",
-            hidden: false,
-          }
-        : {
-            kind: "photo",
-            tag: "img",
-            src,
-            alt: file.name,
-            hidden: false,
-          }
-    );
-
-    writeEditorState(state);
-    applyEditorState();
-    renderMockEditor(adminShell);
-  });
-
-  adminShell.querySelector("[data-admin-panel]")?.append(editor);
+const moveItem = (items, from, to) => {
+  if (to < 0 || to >= items.length) return;
+  const [item] = items.splice(from, 1);
+  items.splice(to, 0, item);
 };
 
-applyEditorState();
+const renderAdminWorkspace = (adminShell) => {
+  adminShell.querySelector("[data-admin-workspace]")?.remove();
+
+  const content = readContent();
+  const activeAlbum = content.albums.find((album) => album.slug === currentSlug()) || content.albums[0];
+  const workspace = document.createElement("div");
+  workspace.className = "mock-editor";
+  workspace.dataset.adminWorkspace = "";
+  workspace.innerHTML = `
+    <div class="mock-editor-title">
+      <div>
+        <h3>Site Content Manager</h3>
+        <p>Albums power the home portfolio grid and their matching section pages.</p>
+      </div>
+      <span>Local draft saved</span>
+    </div>
+
+    <nav class="mock-page-jump" aria-label="Edit pages">
+      <a href="index.html">Home</a>
+      <a href="portfolio.html">Portfolio</a>
+      ${content.albums.map((album) => `<a href="${album.href}">${album.title}</a>`).join("")}
+    </nav>
+
+    <section class="mock-editor-section">
+      <div class="mock-editor-head">
+        <div>
+          <strong>Albums</strong>
+          <span>${content.albums.filter((album) => !album.hidden).length} visible / ${content.albums.length} total</span>
+        </div>
+        <label class="mock-upload">
+          Add album
+          <input type="file" accept="image/*" data-upload-album />
+        </label>
+      </div>
+      <div class="mock-editor-list" data-album-list></div>
+    </section>
+
+    <section class="mock-editor-section">
+      <div class="mock-editor-head">
+        <div>
+          <strong>Photos in ${activeAlbum?.title || "album"}</strong>
+          <span>${activeAlbum?.photos.filter((photo) => !photo.hidden).length || 0} visible / ${activeAlbum?.photos.length || 0} total</span>
+        </div>
+        <label class="mock-upload">
+          Add photo
+          <input type="file" accept="image/*" data-upload-photo="${activeAlbum?.slug || ""}" />
+        </label>
+      </div>
+      <div class="mock-editor-list" data-photo-list></div>
+    </section>
+
+    <button type="button" class="mock-editor-reset" data-reset-content>Reset all local content</button>
+  `;
+
+  const albumList = workspace.querySelector("[data-album-list]");
+  content.albums.forEach((album, index) => {
+    const row = document.createElement("div");
+    row.className = `mock-editor-row${album.hidden ? " is-hidden" : ""}`;
+    row.innerHTML = `
+      <div class="mock-thumb"><img src="${album.cover}" alt="" /></div>
+      <div class="mock-item-copy">
+        <strong>${album.title}</strong>
+        <span>${album.hidden ? "Hidden from portfolio" : "Shown in portfolio"} - ${album.photos.length} photos</span>
+      </div>
+      <div class="mock-actions">
+        <button type="button" data-album-action="toggle" data-index="${index}">${album.hidden ? "Show" : "Hide"}</button>
+        <button type="button" data-album-action="up" data-index="${index}">Move up</button>
+        <button type="button" data-album-action="down" data-index="${index}">Move down</button>
+        <button type="button" data-album-action="remove" data-index="${index}">Remove</button>
+      </div>
+    `;
+    albumList.append(row);
+  });
+
+  const photoList = workspace.querySelector("[data-photo-list]");
+  if (!activeAlbum?.photos.length) {
+    const empty = document.createElement("p");
+    empty.className = "mock-empty";
+    empty.textContent = "No photos in this album yet.";
+    photoList.append(empty);
+  }
+
+  activeAlbum?.photos.forEach((photo, index) => {
+    const row = document.createElement("div");
+    row.className = `mock-editor-row${photo.hidden ? " is-hidden" : ""}`;
+    row.innerHTML = `
+      <div class="mock-thumb"><img src="${photo.src}" alt="" /></div>
+      <div class="mock-item-copy">
+        <strong>${photo.alt || `Photo ${index + 1}`}</strong>
+        <span>${photo.hidden ? "Hidden from album page" : "Shown on album page"}</span>
+      </div>
+      <div class="mock-actions">
+        <button type="button" data-photo-action="toggle" data-index="${index}">${photo.hidden ? "Show" : "Hide"}</button>
+        <button type="button" data-photo-action="up" data-index="${index}">Move up</button>
+        <button type="button" data-photo-action="down" data-index="${index}">Move down</button>
+        <button type="button" data-photo-action="remove" data-index="${index}">Remove</button>
+      </div>
+    `;
+    photoList.append(row);
+  });
+
+  workspace.addEventListener("click", (event) => {
+    const albumButton = event.target.closest("[data-album-action]");
+    const photoButton = event.target.closest("[data-photo-action]");
+
+    if (albumButton) {
+      const index = Number(albumButton.dataset.index);
+      const action = albumButton.dataset.albumAction;
+      if (action === "toggle") content.albums[index].hidden = !content.albums[index].hidden;
+      if (action === "remove") content.albums.splice(index, 1);
+      if (action === "up") moveItem(content.albums, index, index - 1);
+      if (action === "down") moveItem(content.albums, index, index + 1);
+      saveContent(content);
+      applyContent();
+      renderAdminWorkspace(adminShell);
+    }
+
+    if (photoButton && activeAlbum) {
+      const index = Number(photoButton.dataset.index);
+      const action = photoButton.dataset.photoAction;
+      if (action === "toggle") activeAlbum.photos[index].hidden = !activeAlbum.photos[index].hidden;
+      if (action === "remove") activeAlbum.photos.splice(index, 1);
+      if (action === "up") moveItem(activeAlbum.photos, index, index - 1);
+      if (action === "down") moveItem(activeAlbum.photos, index, index + 1);
+      saveContent(content);
+      applyContent();
+      renderAdminWorkspace(adminShell);
+    }
+
+    if (event.target.closest("[data-reset-content]")) {
+      localStorage.removeItem(GLOBAL_CONTENT_KEY);
+      applyContent();
+      renderAdminWorkspace(adminShell);
+    }
+  });
+
+  workspace.addEventListener("change", async (event) => {
+    const albumInput = event.target.closest("[data-upload-album]");
+    const photoInput = event.target.closest("[data-upload-photo]");
+
+    if (albumInput?.files?.length) {
+      const file = albumInput.files[0];
+      const title = prompt("Album name:", file.name.replace(/\.[^.]+$/, "")) || "New album";
+      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `album-${Date.now()}`;
+      const src = await fileToDataUrl(file);
+      content.albums.push({
+        slug,
+        title,
+        href: "#",
+        cover: src,
+        hidden: false,
+        photos: [{ src, alt: title, hidden: false }],
+      });
+    }
+
+    if (photoInput?.files?.length && activeAlbum) {
+      const file = photoInput.files[0];
+      const src = await fileToDataUrl(file);
+      activeAlbum.photos.push({ src, alt: file.name, hidden: false });
+      if (!activeAlbum.cover) activeAlbum.cover = src;
+    }
+
+    saveContent(content);
+    applyContent();
+    renderAdminWorkspace(adminShell);
+  });
+
+  adminShell.querySelector("[data-admin-panel]")?.append(workspace);
+};
+
+applyContent();
 
 if (siteFooter) {
   const adminShell = document.createElement("section");
@@ -305,7 +368,10 @@ if (siteFooter) {
         <p class="admin-message" data-admin-message></p>
       </form>
       <div class="admin-panel" data-admin-panel hidden>
-        <span>Admin conectado</span>
+        <div class="admin-panel-top">
+          <strong>Admin workspace</strong>
+          <span>Global album library. Local mock mode.</span>
+        </div>
         <button type="button" data-admin-logout>Sair</button>
       </div>
     </details>
@@ -321,13 +387,15 @@ if (siteFooter) {
   const setAdminState = (isLoggedIn) => {
     adminForm.hidden = isLoggedIn;
     adminPanel.hidden = !isLoggedIn;
+    document.body.classList.toggle("admin-editing", isLoggedIn);
+
     if (isLoggedIn) {
       adminMessage.textContent = "";
       localStorage.setItem("portfolio-admin", "1");
-      renderMockEditor(adminShell);
+      renderAdminWorkspace(adminShell);
     } else {
       localStorage.removeItem("portfolio-admin");
-      adminShell.querySelector("[data-mock-editor]")?.remove();
+      adminShell.querySelector("[data-admin-workspace]")?.remove();
     }
   };
 
@@ -345,7 +413,7 @@ if (siteFooter) {
       return;
     }
 
-    adminMessage.textContent = "Login inválido.";
+    adminMessage.textContent = "Login invalido.";
   });
 
   adminLogout.addEventListener("click", () => {
