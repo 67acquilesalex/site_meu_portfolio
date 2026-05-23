@@ -130,6 +130,7 @@ const albumCard = (album, index) => {
   const item = document.createElement("a");
   item.className = `gallery-item ${index % 2 ? "wide" : "tall"}`;
   item.href = album.href;
+  item.dataset.albumIndex = String(index);
   item.innerHTML = `
     <img src="${album.cover}" alt="${album.title}" />
     <span>${album.title}</span>
@@ -137,11 +138,12 @@ const albumCard = (album, index) => {
   return item;
 };
 
-const photoNode = (photo) => {
-  const image = document.createElement("img");
-  image.src = photo.src;
-  image.alt = photo.alt || "Foto";
-  return image;
+const photoNode = (photo, index) => {
+  const item = document.createElement("figure");
+  item.className = "photo-item";
+  item.dataset.photoIndex = String(index);
+  item.innerHTML = `<img src="${photo.src}" alt="${photo.alt || "Foto"}" />`;
+  return item;
 };
 
 const applyContent = () => {
@@ -162,6 +164,8 @@ const applyContent = () => {
     const photos = album.photos.filter((photo) => !photo.hidden);
     categoryGallery.replaceChildren(...photos.map(photoNode));
   }
+
+  if (document.body.classList.contains("admin-editing")) renderInlineAdmin();
 };
 
 const fileToDataUrl = (file) =>
@@ -178,173 +182,180 @@ const moveItem = (items, from, to) => {
   items.splice(to, 0, item);
 };
 
+const visibleIndexToRealIndex = (items, visibleIndex) => {
+  const visibleItems = items
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => !item.hidden);
+  return visibleItems[visibleIndex]?.index ?? -1;
+};
+
+const saveAndRefresh = (content) => {
+  saveContent(content);
+  applyContent();
+};
+
+const renderInlineAdmin = () => {
+  document.querySelectorAll("[data-inline-admin]").forEach((item) => item.remove());
+  const content = readContent();
+
+  document.querySelectorAll(".portfolio-gallery").forEach((gallery) => {
+    gallery.classList.add("inline-admin-scope");
+
+    const bar = document.createElement("div");
+    bar.className = "inline-admin-bar";
+    bar.dataset.inlineAdmin = "";
+    bar.innerHTML = `
+      <span>Portfolio albums</span>
+      <label>
+        Upload album
+        <input type="file" accept="image/*" data-upload-album />
+      </label>
+      <button type="button" data-reset-content>Reset</button>
+    `;
+    gallery.before(bar);
+
+    gallery.querySelectorAll(".gallery-item").forEach((card, visibleIndex) => {
+      const realIndex = visibleIndexToRealIndex(content.albums, visibleIndex);
+      if (realIndex < 0) return;
+      const controls = document.createElement("div");
+      controls.className = "inline-admin-card";
+      controls.dataset.inlineAdmin = "";
+      controls.innerHTML = `
+        <button type="button" data-album-action="toggle" data-index="${realIndex}">Hide</button>
+        <button type="button" data-album-action="up" data-index="${realIndex}">Up</button>
+        <button type="button" data-album-action="down" data-index="${realIndex}">Down</button>
+        <button type="button" data-album-action="remove" data-index="${realIndex}">Remove</button>
+      `;
+      card.append(controls);
+    });
+  });
+
+  const slug = currentSlug();
+  const activeAlbum = content.albums.find((album) => album.slug === slug);
+  const categoryGallery = document.querySelector(".masonry.category-gallery");
+  if (activeAlbum && categoryGallery) {
+    categoryGallery.classList.add("inline-admin-scope");
+
+    const bar = document.createElement("div");
+    bar.className = "inline-admin-bar";
+    bar.dataset.inlineAdmin = "";
+    bar.innerHTML = `
+      <span>${activeAlbum.title} photos</span>
+      <label>
+        Upload photo
+        <input type="file" accept="image/*" data-upload-photo="${activeAlbum.slug}" />
+      </label>
+    `;
+    categoryGallery.before(bar);
+
+    categoryGallery.querySelectorAll(".photo-item").forEach((item, visibleIndex) => {
+      const realIndex = visibleIndexToRealIndex(activeAlbum.photos, visibleIndex);
+      if (realIndex < 0) return;
+      const controls = document.createElement("figcaption");
+      controls.className = "inline-admin-card";
+      controls.dataset.inlineAdmin = "";
+      controls.innerHTML = `
+        <button type="button" data-photo-action="toggle" data-index="${realIndex}">Hide</button>
+        <button type="button" data-photo-action="up" data-index="${realIndex}">Up</button>
+        <button type="button" data-photo-action="down" data-index="${realIndex}">Down</button>
+        <button type="button" data-photo-action="remove" data-index="${realIndex}">Remove</button>
+      `;
+      item.append(controls);
+    });
+  }
+};
+
+document.addEventListener("click", (event) => {
+  if (!document.body.classList.contains("admin-editing")) return;
+
+  const albumButton = event.target.closest("[data-album-action]");
+  const photoButton = event.target.closest("[data-photo-action]");
+  const resetButton = event.target.closest("[data-reset-content]");
+  const content = readContent();
+
+  if (albumButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    const index = Number(albumButton.dataset.index);
+    const action = albumButton.dataset.albumAction;
+    if (!content.albums[index]) return;
+    if (action === "toggle") content.albums[index].hidden = !content.albums[index].hidden;
+    if (action === "remove") content.albums.splice(index, 1);
+    if (action === "up") moveItem(content.albums, index, index - 1);
+    if (action === "down") moveItem(content.albums, index, index + 1);
+    saveAndRefresh(content);
+  }
+
+  if (photoButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    const album = content.albums.find((item) => item.slug === currentSlug());
+    const index = Number(photoButton.dataset.index);
+    const action = photoButton.dataset.photoAction;
+    if (!album?.photos[index]) return;
+    if (action === "toggle") album.photos[index].hidden = !album.photos[index].hidden;
+    if (action === "remove") album.photos.splice(index, 1);
+    if (action === "up") moveItem(album.photos, index, index - 1);
+    if (action === "down") moveItem(album.photos, index, index + 1);
+    saveAndRefresh(content);
+  }
+
+  if (resetButton) {
+    event.preventDefault();
+    localStorage.removeItem(GLOBAL_CONTENT_KEY);
+    applyContent();
+  }
+});
+
+document.addEventListener("change", async (event) => {
+  if (!document.body.classList.contains("admin-editing")) return;
+
+  const albumInput = event.target.closest("[data-upload-album]");
+  const photoInput = event.target.closest("[data-upload-photo]");
+  const content = readContent();
+
+  if (albumInput?.files?.length) {
+    const file = albumInput.files[0];
+    const title = prompt("Album name:", file.name.replace(/\.[^.]+$/, "")) || "New album";
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `album-${Date.now()}`;
+    const src = await fileToDataUrl(file);
+    content.albums.push({
+      slug,
+      title,
+      href: "#",
+      cover: src,
+      hidden: false,
+      photos: [{ src, alt: title, hidden: false }],
+    });
+    saveAndRefresh(content);
+  }
+
+  if (photoInput?.files?.length) {
+    const album = content.albums.find((item) => item.slug === currentSlug());
+    if (!album) return;
+    const file = photoInput.files[0];
+    const src = await fileToDataUrl(file);
+    album.photos.push({ src, alt: file.name, hidden: false });
+    if (!album.cover) album.cover = src;
+    saveAndRefresh(content);
+  }
+});
+
 const renderAdminWorkspace = (adminShell) => {
   adminShell.querySelector("[data-admin-workspace]")?.remove();
 
-  const content = readContent();
-  const activeAlbum = content.albums.find((album) => album.slug === currentSlug()) || content.albums[0];
   const workspace = document.createElement("div");
   workspace.className = "mock-editor";
   workspace.dataset.adminWorkspace = "";
   workspace.innerHTML = `
     <div class="mock-editor-title">
       <div>
-        <h3>Site Content Manager</h3>
-        <p>Albums power the home portfolio grid and their matching section pages.</p>
+        <h3>Inline editing enabled</h3>
+        <p>Close this panel and use the controls on the albums and photos directly.</p>
       </div>
       <span>Local draft saved</span>
     </div>
-
-    <nav class="mock-page-jump" aria-label="Edit pages">
-      <a href="index.html">Home</a>
-      <a href="portfolio.html">Portfolio</a>
-      ${content.albums.map((album) => `<a href="${album.href}">${album.title}</a>`).join("")}
-    </nav>
-
-    <section class="mock-editor-section">
-      <div class="mock-editor-head">
-        <div>
-          <strong>Albums</strong>
-          <span>${content.albums.filter((album) => !album.hidden).length} visible / ${content.albums.length} total</span>
-        </div>
-        <label class="mock-upload">
-          Add album
-          <input type="file" accept="image/*" data-upload-album />
-        </label>
-      </div>
-      <div class="mock-editor-list" data-album-list></div>
-    </section>
-
-    <section class="mock-editor-section">
-      <div class="mock-editor-head">
-        <div>
-          <strong>Photos in ${activeAlbum?.title || "album"}</strong>
-          <span>${activeAlbum?.photos.filter((photo) => !photo.hidden).length || 0} visible / ${activeAlbum?.photos.length || 0} total</span>
-        </div>
-        <label class="mock-upload">
-          Add photo
-          <input type="file" accept="image/*" data-upload-photo="${activeAlbum?.slug || ""}" />
-        </label>
-      </div>
-      <div class="mock-editor-list" data-photo-list></div>
-    </section>
-
-    <button type="button" class="mock-editor-reset" data-reset-content>Reset all local content</button>
   `;
-
-  const albumList = workspace.querySelector("[data-album-list]");
-  content.albums.forEach((album, index) => {
-    const row = document.createElement("div");
-    row.className = `mock-editor-row${album.hidden ? " is-hidden" : ""}`;
-    row.innerHTML = `
-      <div class="mock-thumb"><img src="${album.cover}" alt="" /></div>
-      <div class="mock-item-copy">
-        <strong>${album.title}</strong>
-        <span>${album.hidden ? "Hidden from portfolio" : "Shown in portfolio"} - ${album.photos.length} photos</span>
-      </div>
-      <div class="mock-actions">
-        <button type="button" data-album-action="toggle" data-index="${index}">${album.hidden ? "Show" : "Hide"}</button>
-        <button type="button" data-album-action="up" data-index="${index}">Move up</button>
-        <button type="button" data-album-action="down" data-index="${index}">Move down</button>
-        <button type="button" data-album-action="remove" data-index="${index}">Remove</button>
-      </div>
-    `;
-    albumList.append(row);
-  });
-
-  const photoList = workspace.querySelector("[data-photo-list]");
-  if (!activeAlbum?.photos.length) {
-    const empty = document.createElement("p");
-    empty.className = "mock-empty";
-    empty.textContent = "No photos in this album yet.";
-    photoList.append(empty);
-  }
-
-  activeAlbum?.photos.forEach((photo, index) => {
-    const row = document.createElement("div");
-    row.className = `mock-editor-row${photo.hidden ? " is-hidden" : ""}`;
-    row.innerHTML = `
-      <div class="mock-thumb"><img src="${photo.src}" alt="" /></div>
-      <div class="mock-item-copy">
-        <strong>${photo.alt || `Photo ${index + 1}`}</strong>
-        <span>${photo.hidden ? "Hidden from album page" : "Shown on album page"}</span>
-      </div>
-      <div class="mock-actions">
-        <button type="button" data-photo-action="toggle" data-index="${index}">${photo.hidden ? "Show" : "Hide"}</button>
-        <button type="button" data-photo-action="up" data-index="${index}">Move up</button>
-        <button type="button" data-photo-action="down" data-index="${index}">Move down</button>
-        <button type="button" data-photo-action="remove" data-index="${index}">Remove</button>
-      </div>
-    `;
-    photoList.append(row);
-  });
-
-  workspace.addEventListener("click", (event) => {
-    const albumButton = event.target.closest("[data-album-action]");
-    const photoButton = event.target.closest("[data-photo-action]");
-
-    if (albumButton) {
-      const index = Number(albumButton.dataset.index);
-      const action = albumButton.dataset.albumAction;
-      if (action === "toggle") content.albums[index].hidden = !content.albums[index].hidden;
-      if (action === "remove") content.albums.splice(index, 1);
-      if (action === "up") moveItem(content.albums, index, index - 1);
-      if (action === "down") moveItem(content.albums, index, index + 1);
-      saveContent(content);
-      applyContent();
-      renderAdminWorkspace(adminShell);
-    }
-
-    if (photoButton && activeAlbum) {
-      const index = Number(photoButton.dataset.index);
-      const action = photoButton.dataset.photoAction;
-      if (action === "toggle") activeAlbum.photos[index].hidden = !activeAlbum.photos[index].hidden;
-      if (action === "remove") activeAlbum.photos.splice(index, 1);
-      if (action === "up") moveItem(activeAlbum.photos, index, index - 1);
-      if (action === "down") moveItem(activeAlbum.photos, index, index + 1);
-      saveContent(content);
-      applyContent();
-      renderAdminWorkspace(adminShell);
-    }
-
-    if (event.target.closest("[data-reset-content]")) {
-      localStorage.removeItem(GLOBAL_CONTENT_KEY);
-      applyContent();
-      renderAdminWorkspace(adminShell);
-    }
-  });
-
-  workspace.addEventListener("change", async (event) => {
-    const albumInput = event.target.closest("[data-upload-album]");
-    const photoInput = event.target.closest("[data-upload-photo]");
-
-    if (albumInput?.files?.length) {
-      const file = albumInput.files[0];
-      const title = prompt("Album name:", file.name.replace(/\.[^.]+$/, "")) || "New album";
-      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `album-${Date.now()}`;
-      const src = await fileToDataUrl(file);
-      content.albums.push({
-        slug,
-        title,
-        href: "#",
-        cover: src,
-        hidden: false,
-        photos: [{ src, alt: title, hidden: false }],
-      });
-    }
-
-    if (photoInput?.files?.length && activeAlbum) {
-      const file = photoInput.files[0];
-      const src = await fileToDataUrl(file);
-      activeAlbum.photos.push({ src, alt: file.name, hidden: false });
-      if (!activeAlbum.cover) activeAlbum.cover = src;
-    }
-
-    saveContent(content);
-    applyContent();
-    renderAdminWorkspace(adminShell);
-  });
-
   adminShell.querySelector("[data-admin-panel]")?.append(workspace);
 };
 
@@ -417,10 +428,15 @@ if (siteFooter) {
     if (isLoggedIn) {
       adminMessage.textContent = "";
       localStorage.setItem("portfolio-admin", "1");
+      if (adminToggle) adminToggle.checked = false;
+      adminShell.classList.remove("is-open");
       renderAdminWorkspace(adminShell);
+      renderInlineAdmin();
     } else {
       localStorage.removeItem("portfolio-admin");
       adminShell.querySelector("[data-admin-workspace]")?.remove();
+      document.querySelectorAll("[data-inline-admin]").forEach((item) => item.remove());
+      document.querySelectorAll(".inline-admin-scope").forEach((item) => item.classList.remove("inline-admin-scope"));
     }
   };
 

@@ -708,6 +708,87 @@ button {
   margin-top: 2px;
 }
 
+.inline-admin-scope {
+  outline: 1px dashed rgba(86, 68, 54, 0.28);
+  outline-offset: 6px;
+}
+
+.inline-admin-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  width: min(var(--site-width), calc(100% - 24px));
+  margin: 18px auto 10px;
+  border: 1px solid rgba(86, 68, 54, 0.2);
+  padding: 8px 10px;
+  color: var(--line);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 8px 18px rgba(86, 68, 54, 0.08);
+  font-size: 12px;
+}
+
+.inline-admin-bar span {
+  font-weight: 700;
+}
+
+.inline-admin-bar label,
+.inline-admin-bar button,
+.inline-admin-card button {
+  position: relative;
+  display: inline-grid;
+  min-height: 28px;
+  place-items: center;
+  border: 1px solid rgba(86, 68, 54, 0.26);
+  padding: 0 9px;
+  color: var(--line);
+  background: rgba(238, 226, 210, 0.86);
+  cursor: pointer;
+  font: 700 11px/1 "Raleway", Helvetica, Arial, sans-serif;
+  text-transform: uppercase;
+}
+
+.inline-admin-bar input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.inline-admin-card {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: calc(100% - 16px);
+  justify-content: end;
+  pointer-events: auto;
+}
+
+.inline-admin-card button {
+  min-height: 24px;
+  padding: 0 7px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px rgba(44, 44, 43, 0.14);
+}
+
+.photo-item {
+  position: relative;
+  display: block;
+  margin: 0 0 9px;
+  break-inside: avoid;
+}
+
+.photo-item img {
+  width: 100%;
+  height: auto;
+  margin: 0;
+}
+
 .section-wrap {
   width: min(var(--site-width), calc(100% - 32px));
   margin: 0 auto;
