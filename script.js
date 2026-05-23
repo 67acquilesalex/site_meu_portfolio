@@ -1,24 +1,23 @@
-const header = document.querySelector("[data-header]");
-const filterButtons = document.querySelectorAll("[data-filter]");
-const photoCards = document.querySelectorAll("[data-category]");
+const budgetForm = document.querySelector("[data-budget-form]");
+const whatsappNumber = "5592999999999";
 
-const updateHeader = () => {
-  header.classList.toggle("is-scrolled", window.scrollY > 24);
-};
+if (budgetForm) {
+  budgetForm.addEventListener("submit", (event) => {
+    event.preventDefault();
 
-filterButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    const selected = button.dataset.filter;
+    const formData = new FormData(budgetForm);
+    const message = [
+      "Olá! Gostaria de solicitar um orçamento.",
+      "",
+      `Nome: ${formData.get("nome") || ""}`,
+      `Telefone: ${formData.get("telefone") || ""}`,
+      `Email: ${formData.get("email") || ""}`,
+      `Data da sessão: ${formData.get("data") || "A definir"}`,
+      `Segmento: ${formData.get("segmento") || ""}`,
+      `Mensagem: ${formData.get("mensagem") || ""}`,
+    ].join("\n");
 
-    filterButtons.forEach((item) => item.classList.remove("active"));
-    button.classList.add("active");
-
-    photoCards.forEach((card) => {
-      const shouldShow = selected === "todos" || card.dataset.category === selected;
-      card.classList.toggle("is-hidden", !shouldShow);
-    });
+    const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
   });
-});
-
-window.addEventListener("scroll", updateHeader, { passive: true });
-updateHeader();
+}
