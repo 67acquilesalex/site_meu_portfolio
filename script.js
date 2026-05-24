@@ -1,4 +1,27 @@
-const GLOBAL_CONTENT_KEY = "portfolio-editor:global-content";
+import { firebaseConfig } from "./firebase-config.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import {
+  doc,
+  getDoc,
+  getFirestore,
+  onSnapshot,
+  setDoc,
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import {
+  deleteObject,
+  getDownloadURL,
+  getStorage,
+  ref,
+  uploadBytes,
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
+
+const CONTENT_DOC_PATH = ["portfolio", "content"];
 
 document.querySelectorAll(".menu-group > button").forEach((button) => {
   button.addEventListener("click", () => {
@@ -107,29 +130,38 @@ const defaultAlbums = [
   },
 ];
 
-const readContent = () => {
-  const cloneDefaults = () => JSON.parse(JSON.stringify(defaultAlbums));
-
-  try {
-    const stored = JSON.parse(localStorage.getItem(GLOBAL_CONTENT_KEY) || "null");
-    if (stored?.albums?.length) return stored;
-  } catch {
-    return { albums: cloneDefaults() };
-  }
-
-  return { albums: cloneDefaults() };
+const appState = {
+  firebaseReady: false,
+  auth: null,
+  db: null,
+  storage: null,
+  contentRef: null,
+  content: { albums: structuredClone(defaultAlbums) },
 };
 
-const saveContent = (content) => {
-  localStorage.setItem(GLOBAL_CONTENT_KEY, JSON.stringify(content));
-};
+const hasFirebaseConfig = Object.values(firebaseConfig).every((value) => value && !String(value).includes("COLE_AQUI"));
+
+if (hasFirebaseConfig) {
+  const app = initializeApp(firebaseConfig);
+  appState.firebaseReady = true;
+  appState.auth = getAuth(app);
+  appState.db = getFirestore(app);
+  appState.storage = getStorage(app);
+  appState.contentRef = doc(appState.db, ...CONTENT_DOC_PATH);
+}
+
+const cloneDefaults = () => structuredClone(defaultAlbums);
+
+const normalizeContent = (content) => ({
+  albums: Array.isArray(content?.albums) && content.albums.length ? content.albums : cloneDefaults(),
+});
 
 const currentSlug = () => location.pathname.replace(/^\/|\.html$/g, "") || "index";
 
 const albumCard = (album, index) => {
   const item = document.createElement("a");
   item.className = `gallery-item ${index % 2 ? "wide" : "tall"}`;
-  item.href = album.href;
+  item.href = album.href || "#";
   item.dataset.albumIndex = String(index);
   item.innerHTML = `
     <img src="${album.cover}" alt="${album.title}" />
@@ -147,7 +179,7 @@ const photoNode = (photo, index) => {
 };
 
 const applyContent = () => {
-  const content = readContent();
+  const content = appState.content;
 
   document.querySelectorAll(".portfolio-gallery").forEach((gallery) => {
     gallery.replaceChildren(
@@ -168,14 +200,6 @@ const applyContent = () => {
   if (document.body.classList.contains("admin-editing")) renderInlineAdmin();
 };
 
-const fileToDataUrl = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener("load", () => resolve(String(reader.result || "")));
-    reader.addEventListener("error", reject);
-    reader.readAsDataURL(file);
-  });
-
 const moveItem = (items, from, to) => {
   if (to < 0 || to >= items.length) return;
   const [item] = items.splice(from, 1);
@@ -189,14 +213,51 @@ const visibleIndexToRealIndex = (items, visibleIndex) => {
   return visibleItems[visibleIndex]?.index ?? -1;
 };
 
-const saveAndRefresh = (content) => {
-  saveContent(content);
+const slugify = (value) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+const updateContent = async (updater) => {
+  if (!appState.firebaseReady) {
+    alert("Configure o Firebase em firebase-config.js antes de editar.");
+    return;
+  }
+
+  const nextContent = structuredClone(appState.content);
+  await updater(nextContent);
+  appState.content = normalizeContent(nextContent);
+  await setDoc(appState.contentRef, appState.content, { merge: false });
   applyContent();
+};
+
+const uploadImage = async (file, folder) => {
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "-");
+  const path = `portfolio/${folder}/${Date.now()}-${safeName}`;
+  const imageRef = ref(appState.storage, path);
+  await uploadBytes(imageRef, file, { contentType: file.type });
+  return {
+    src: await getDownloadURL(imageRef),
+    storagePath: path,
+  };
+};
+
+const deleteStoredImage = async (item) => {
+  if (!item?.storagePath || !appState.firebaseReady) return;
+
+  try {
+    await deleteObject(ref(appState.storage, item.storagePath));
+  } catch (error) {
+    console.warn("Nao foi possivel remover a imagem do Storage.", error);
+  }
 };
 
 const renderInlineAdmin = () => {
   document.querySelectorAll("[data-inline-admin]").forEach((item) => item.remove());
-  const content = readContent();
+  const content = appState.content;
 
   document.querySelectorAll(".portfolio-gallery").forEach((gallery) => {
     gallery.classList.add("inline-admin-scope");
@@ -210,7 +271,7 @@ const renderInlineAdmin = () => {
         Enviar album
         <input type="file" accept="image/*" data-upload-album />
       </label>
-      <button type="button" data-reset-content>Restaurar</button>
+      <button type="button" data-seed-content>Publicar padrao</button>
     `;
     gallery.before(bar);
 
@@ -265,45 +326,54 @@ const renderInlineAdmin = () => {
   }
 };
 
-document.addEventListener("click", (event) => {
+document.addEventListener("click", async (event) => {
   if (!document.body.classList.contains("admin-editing")) return;
 
   const albumButton = event.target.closest("[data-album-action]");
   const photoButton = event.target.closest("[data-photo-action]");
-  const resetButton = event.target.closest("[data-reset-content]");
-  const content = readContent();
+  const seedButton = event.target.closest("[data-seed-content]");
 
   if (albumButton) {
     event.preventDefault();
     event.stopPropagation();
     const index = Number(albumButton.dataset.index);
     const action = albumButton.dataset.albumAction;
-    if (!content.albums[index]) return;
-    if (action === "toggle") content.albums[index].hidden = !content.albums[index].hidden;
-    if (action === "remove") content.albums.splice(index, 1);
-    if (action === "up") moveItem(content.albums, index, index - 1);
-    if (action === "down") moveItem(content.albums, index, index + 1);
-    saveAndRefresh(content);
+    await updateContent(async (content) => {
+      if (!content.albums[index]) return;
+      if (action === "toggle") content.albums[index].hidden = !content.albums[index].hidden;
+      if (action === "remove") {
+        const [album] = content.albums.splice(index, 1);
+        await Promise.all([deleteStoredImage(album), ...(album.photos || []).map(deleteStoredImage)]);
+      }
+      if (action === "up") moveItem(content.albums, index, index - 1);
+      if (action === "down") moveItem(content.albums, index, index + 1);
+    });
   }
 
   if (photoButton) {
     event.preventDefault();
     event.stopPropagation();
-    const album = content.albums.find((item) => item.slug === currentSlug());
     const index = Number(photoButton.dataset.index);
     const action = photoButton.dataset.photoAction;
-    if (!album?.photos[index]) return;
-    if (action === "toggle") album.photos[index].hidden = !album.photos[index].hidden;
-    if (action === "remove") album.photos.splice(index, 1);
-    if (action === "up") moveItem(album.photos, index, index - 1);
-    if (action === "down") moveItem(album.photos, index, index + 1);
-    saveAndRefresh(content);
+    await updateContent(async (content) => {
+      const album = content.albums.find((item) => item.slug === currentSlug());
+      if (!album?.photos[index]) return;
+      if (action === "toggle") album.photos[index].hidden = !album.photos[index].hidden;
+      if (action === "remove") {
+        const [photo] = album.photos.splice(index, 1);
+        await deleteStoredImage(photo);
+        if (album.cover === photo.src) album.cover = album.photos.find((item) => !item.hidden)?.src || album.photos[0]?.src || "";
+      }
+      if (action === "up") moveItem(album.photos, index, index - 1);
+      if (action === "down") moveItem(album.photos, index, index + 1);
+    });
   }
 
-  if (resetButton) {
+  if (seedButton) {
     event.preventDefault();
-    localStorage.removeItem(GLOBAL_CONTENT_KEY);
-    applyContent();
+    await updateContent((content) => {
+      content.albums = cloneDefaults();
+    });
   }
 });
 
@@ -312,33 +382,38 @@ document.addEventListener("change", async (event) => {
 
   const albumInput = event.target.closest("[data-upload-album]");
   const photoInput = event.target.closest("[data-upload-photo]");
-  const content = readContent();
 
   if (albumInput?.files?.length) {
     const file = albumInput.files[0];
     const title = prompt("Nome do album:", file.name.replace(/\.[^.]+$/, "")) || "Novo album";
-    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `album-${Date.now()}`;
-    const src = await fileToDataUrl(file);
-    content.albums.push({
-      slug,
-      title,
-      href: "#",
-      cover: src,
-      hidden: false,
-      photos: [{ src, alt: title, hidden: false }],
+    const slug = slugify(title) || `album-${Date.now()}`;
+    const uploaded = await uploadImage(file, slug);
+    await updateContent((content) => {
+      content.albums.push({
+        slug,
+        title,
+        href: "#",
+        cover: uploaded.src,
+        storagePath: uploaded.storagePath,
+        hidden: false,
+        photos: [{ src: uploaded.src, storagePath: uploaded.storagePath, alt: title, hidden: false }],
+      });
     });
-    saveAndRefresh(content);
   }
 
   if (photoInput?.files?.length) {
-    const album = content.albums.find((item) => item.slug === currentSlug());
+    const album = appState.content.albums.find((item) => item.slug === currentSlug());
     if (!album) return;
     const file = photoInput.files[0];
-    const src = await fileToDataUrl(file);
-    album.photos.push({ src, alt: file.name, hidden: false });
-    if (!album.cover) album.cover = src;
-    saveAndRefresh(content);
+    const uploaded = await uploadImage(file, album.slug);
+    await updateContent((content) => {
+      const nextAlbum = content.albums.find((item) => item.slug === currentSlug());
+      nextAlbum.photos.push({ src: uploaded.src, storagePath: uploaded.storagePath, alt: file.name, hidden: false });
+      if (!nextAlbum.cover) nextAlbum.cover = uploaded.src;
+    });
   }
+
+  event.target.value = "";
 });
 
 const renderAdminWorkspace = (adminShell) => {
@@ -353,13 +428,30 @@ const renderAdminWorkspace = (adminShell) => {
         <h3>Edicao inline ativada</h3>
         <p>Feche este painel e use os controles diretamente nos albuns e fotos.</p>
       </div>
-      <span>Rascunho local salvo</span>
+      <span>Firebase conectado</span>
     </div>
   `;
   adminShell.querySelector("[data-admin-panel]")?.append(workspace);
 };
 
-applyContent();
+const initializeContent = async () => {
+  if (!appState.firebaseReady) {
+    applyContent();
+    return;
+  }
+
+  const snapshot = await getDoc(appState.contentRef);
+  if (!snapshot.exists()) {
+    await setDoc(appState.contentRef, { albums: cloneDefaults() });
+  }
+
+  onSnapshot(appState.contentRef, (docSnapshot) => {
+    appState.content = normalizeContent(docSnapshot.data());
+    applyContent();
+  });
+};
+
+await initializeContent();
 
 const siteFooter = document.querySelector(".site-footer");
 
@@ -374,8 +466,8 @@ if (siteFooter) {
         <summary>Login administrativo</summary>
         <form class="admin-form" data-admin-login>
           <label>
-            Login
-            <input name="login" type="text" autocomplete="username" />
+            Email
+            <input name="login" type="email" autocomplete="username" />
           </label>
           <label>
             Senha
@@ -387,7 +479,7 @@ if (siteFooter) {
         <div class="admin-panel" data-admin-panel hidden>
           <div class="admin-panel-top">
             <strong>Edicao do site</strong>
-            <span>Biblioteca de albuns. Rascunho local.</span>
+            <span>Biblioteca de albuns conectada ao Firebase.</span>
           </div>
           <button type="button" data-admin-logout>Sair</button>
         </div>
@@ -427,38 +519,45 @@ if (siteFooter) {
 
     if (isLoggedIn) {
       adminMessage.textContent = "";
-      localStorage.setItem("portfolio-admin", "1");
       if (adminToggle) adminToggle.checked = false;
       adminShell.classList.remove("is-open");
       renderAdminWorkspace(adminShell);
       renderInlineAdmin();
     } else {
-      localStorage.removeItem("portfolio-admin");
       adminShell.querySelector("[data-admin-workspace]")?.remove();
       document.querySelectorAll("[data-inline-admin]").forEach((item) => item.remove());
       document.querySelectorAll(".inline-admin-scope").forEach((item) => item.classList.remove("inline-admin-scope"));
     }
   };
 
-  setAdminState(localStorage.getItem("portfolio-admin") === "1");
+  if (appState.firebaseReady) {
+    onAuthStateChanged(appState.auth, (user) => setAdminState(Boolean(user)));
+  } else {
+    setAdminState(false);
+    adminMessage.textContent = "Configure firebase-config.js para habilitar o login.";
+  }
 
-  adminForm.addEventListener("submit", (event) => {
+  adminForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const formData = new FormData(adminForm);
-    const login = String(formData.get("login") || "").trim();
-    const password = String(formData.get("password") || "");
-
-    if (login === "admin" && password === "admin123") {
-      setAdminState(true);
-      adminForm.reset();
+    if (!appState.firebaseReady) {
+      adminMessage.textContent = "Configure firebase-config.js para habilitar o login.";
       return;
     }
 
-    adminMessage.textContent = "Login invalido.";
+    const formData = new FormData(adminForm);
+    const email = String(formData.get("login") || "").trim();
+    const password = String(formData.get("password") || "");
+
+    try {
+      await signInWithEmailAndPassword(appState.auth, email, password);
+      adminForm.reset();
+    } catch {
+      adminMessage.textContent = "Login invalido.";
+    }
   });
 
-  adminLogout.addEventListener("click", () => {
-    setAdminState(false);
+  adminLogout.addEventListener("click", async () => {
+    if (appState.firebaseReady) await signOut(appState.auth);
     if (adminToggle) adminToggle.checked = false;
     adminShell.classList.remove("is-open");
   });

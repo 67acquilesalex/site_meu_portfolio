@@ -36,13 +36,50 @@ Site estatico pronto para publicar na Vercel, agora separado por paginas.
 
 Depois do deploy, conecte o dominio da Hostinger em `Project Settings > Domains` na Vercel e configure o DNS conforme as instrucoes exibidas.
 
-## Proxima etapa tecnica
+## Admin com Firebase
 
-O modo admin atual e apenas um mock local para demonstrar UX. Para upload real de fotos e albuns, migrar o projeto para Next.js otimizado e usar Firebase no plano Spark:
+O admin usa Firebase no plano Spark, mantendo a edicao inline no proprio site:
 
-- Usar Firebase Auth para o login administrativo.
-- Usar Firestore para salvar albuns, ordem, visibilidade, titulos e metadados das fotos.
-- Usar Firebase Storage para upload, remocao e exibicao real das imagens.
-- Manter a experiencia atual: o site publico continua igual, e ao logar como admin aparecem controles inline nos proprios albuns e fotos.
-- Otimizar imagens com Next.js Image, lazy loading, tamanhos responsivos e cache adequado para Vercel.
-- Remover o mock baseado em `localStorage` quando Firebase estiver implementado.
+- Firebase Auth faz o login administrativo por e-mail e senha.
+- Firestore salva albuns, ordem, visibilidade, titulos e metadados das fotos em `portfolio/content`.
+- Firebase Storage salva uploads em `portfolio/{albumSlug}/`.
+- Visitantes continuam vendo o portfolio normalmente.
+- Depois do login, aparecem controles inline para enviar, remover, ocultar e reordenar albuns e fotos.
+
+Para ativar:
+
+1. Crie um projeto no Firebase.
+2. Ative Authentication com provedor Email/Password.
+3. Crie o usuario administrativo em Authentication > Users.
+4. Ative Firestore Database.
+5. Ative Storage.
+6. Copie a configuracao Web App do Firebase para `firebase-config.js`.
+7. Publique na Vercel.
+
+Regras iniciais sugeridas para Firestore:
+
+```js
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /portfolio/content {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}
+```
+
+Regras iniciais sugeridas para Storage:
+
+```js
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /portfolio/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}
+```

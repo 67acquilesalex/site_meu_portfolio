@@ -120,8 +120,8 @@
         <summary>Login administrativo</summary>
         <form class="admin-form" data-admin-login>
           <label>
-            Login
-            <input name="login" type="text" autocomplete="username" />
+            Email
+            <input name="login" type="email" autocomplete="username" />
           </label>
           <label>
             Senha
@@ -133,13 +133,13 @@
         <div class="admin-panel" data-admin-panel hidden>
           <div class="admin-panel-top">
             <strong>Edicao do site</strong>
-            <span>Biblioteca de albuns. Rascunho local.</span>
+            <span>Biblioteca de albuns conectada ao Firebase.</span>
           </div>
           <button type="button" data-admin-logout>Sair</button>
         </div>
       </details>
     </section>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
   </body>
 </html>
