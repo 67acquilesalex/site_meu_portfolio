@@ -1,6 +1,7 @@
 import { firebaseConfig } from "./firebase-config.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
+  createUserWithEmailAndPassword,
   getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -11,17 +12,9 @@ import {
   getDoc,
   getFirestore,
   onSnapshot,
+  serverTimestamp,
   setDoc,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-import {
-  deleteObject,
-  getDownloadURL,
-  getStorage,
-  ref,
-  uploadBytes,
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
-
-const CONTENT_DOC_PATH = ["portfolio", "content"];
 
 document.querySelectorAll(".menu-group > button").forEach((button) => {
   button.addEventListener("click", () => {
@@ -30,30 +23,6 @@ document.querySelectorAll(".menu-group > button").forEach((button) => {
     button.setAttribute("aria-expanded", expanded ? "true" : "false");
   });
 });
-
-const budgetForm = document.querySelector("[data-budget-form]");
-const whatsappNumber = "5592999999999";
-
-if (budgetForm) {
-  budgetForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-
-    const formData = new FormData(budgetForm);
-    const message = [
-      "Ola! Gostaria de solicitar um orcamento.",
-      "",
-      `Nome: ${formData.get("nome") || ""}`,
-      `Telefone: ${formData.get("telefone") || ""}`,
-      `Email: ${formData.get("email") || ""}`,
-      `Data da sessao: ${formData.get("data") || "A definir"}`,
-      `Segmento: ${formData.get("segmento") || ""}`,
-      `Mensagem: ${formData.get("mensagem") || ""}`,
-    ].join("\n");
-
-    const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  });
-}
 
 const defaultAlbums = [
   {
@@ -134,9 +103,9 @@ const appState = {
   firebaseReady: false,
   auth: null,
   db: null,
-  storage: null,
-  contentRef: null,
-  content: { albums: structuredClone(defaultAlbums) },
+  user: null,
+  profile: null,
+  photographers: [],
 };
 
 const hasFirebaseConfig = Object.values(firebaseConfig).every((value) => value && !String(value).includes("COLE_AQUI"));
@@ -146,15 +115,42 @@ if (hasFirebaseConfig) {
   appState.firebaseReady = true;
   appState.auth = getAuth(app);
   appState.db = getFirestore(app);
-  appState.storage = getStorage(app);
-  appState.contentRef = doc(appState.db, ...CONTENT_DOC_PATH);
 }
 
-const cloneDefaults = () => structuredClone(defaultAlbums);
+const budgetForm = document.querySelector("[data-budget-form]");
+const whatsappNumber = "5592999999999";
 
-const normalizeContent = (content) => ({
-  albums: Array.isArray(content?.albums) && content.albums.length ? content.albums : cloneDefaults(),
-});
+if (budgetForm) {
+  budgetForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const formData = new FormData(budgetForm);
+    const message = [
+      "Ola! Gostaria de solicitar um orcamento.",
+      "",
+      `Nome: ${formData.get("nome") || ""}`,
+      `Telefone: ${formData.get("telefone") || ""}`,
+      `Email: ${formData.get("email") || ""}`,
+      `Data da sessao: ${formData.get("data") || "A definir"}`,
+      `Segmento: ${formData.get("segmento") || ""}`,
+      `Mensagem: ${formData.get("mensagem") || ""}`,
+    ].join("\n");
+
+    window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+  });
+}
+
+const cleanText = (value, fallback = "") => String(value || fallback).trim();
+const splitList = (value) => cleanText(value).split(",").map((item) => item.trim()).filter(Boolean);
+const escapeHtml = (value) =>
+  String(value || "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[char]);
+const userDoc = (uid) => doc(appState.db, "users", uid);
+const photographerDoc = (uid) => doc(appState.db, "photographers", uid);
 
 const currentSlug = () => location.pathname.replace(/^\/|\.html$/g, "") || "index";
 
@@ -162,7 +158,6 @@ const albumCard = (album, index) => {
   const item = document.createElement("a");
   item.className = `gallery-item ${index % 2 ? "wide" : "tall"}`;
   item.href = album.href || "#";
-  item.dataset.albumIndex = String(index);
   item.innerHTML = `
     <img src="${album.cover}" alt="${album.title}" />
     <span>${album.title}</span>
@@ -170,395 +165,448 @@ const albumCard = (album, index) => {
   return item;
 };
 
-const photoNode = (photo, index) => {
+const photoNode = (photo) => {
   const item = document.createElement("figure");
   item.className = "photo-item";
-  item.dataset.photoIndex = String(index);
   item.innerHTML = `<img src="${photo.src}" alt="${photo.alt || "Foto"}" />`;
   return item;
 };
 
-const applyContent = () => {
-  const content = appState.content;
-
+const renderDefaultPortfolio = () => {
   document.querySelectorAll(".portfolio-gallery").forEach((gallery) => {
-    gallery.replaceChildren(
-      ...content.albums
-        .filter((album) => !album.hidden)
-        .map((album, index) => albumCard(album, index))
-    );
+    gallery.classList.remove("photographer-directory", "photographer-detail-grid");
+    gallery.replaceChildren(...defaultAlbums.filter((album) => !album.hidden).map(albumCard));
   });
 
-  const slug = currentSlug();
-  const album = content.albums.find((item) => item.slug === slug);
+  const album = defaultAlbums.find((item) => item.slug === currentSlug());
   const categoryGallery = document.querySelector(".masonry.category-gallery");
   if (album && categoryGallery) {
-    const photos = album.photos.filter((photo) => !photo.hidden);
-    categoryGallery.replaceChildren(...photos.map(photoNode));
+    categoryGallery.replaceChildren(...album.photos.filter((photo) => !photo.hidden).map(photoNode));
   }
-
-  if (document.body.classList.contains("admin-editing")) renderInlineAdmin();
 };
 
-const moveItem = (items, from, to) => {
-  if (to < 0 || to >= items.length) return;
-  const [item] = items.splice(from, 1);
-  items.splice(to, 0, item);
-};
-
-const visibleIndexToRealIndex = (items, visibleIndex) => {
-  const visibleItems = items
-    .map((item, index) => ({ item, index }))
-    .filter(({ item }) => !item.hidden);
-  return visibleItems[visibleIndex]?.index ?? -1;
-};
-
-const slugify = (value) =>
-  value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-
-const updateContent = async (updater) => {
-  if (!appState.firebaseReady) {
-    alert("Configure o Firebase em firebase-config.js antes de editar.");
+const renderPhotographerCards = () => {
+  if (currentSlug() !== "portfolio") {
+    renderDefaultPortfolio();
     return;
   }
 
-  const nextContent = structuredClone(appState.content);
-  await updater(nextContent);
-  appState.content = normalizeContent(nextContent);
-  await setDoc(appState.contentRef, appState.content, { merge: false });
-  applyContent();
-};
+  const gallery = document.querySelector(".portfolio-gallery");
+  if (!gallery) return;
 
-const uploadImage = async (file, folder) => {
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "-");
-  const path = `portfolio/${folder}/${Date.now()}-${safeName}`;
-  const imageRef = ref(appState.storage, path);
-  await uploadBytes(imageRef, file, { contentType: file.type });
-  return {
-    src: await getDownloadURL(imageRef),
-    storagePath: path,
-  };
-};
+  const params = new URLSearchParams(location.search);
+  const selectedId = params.get("fotografo");
+  const publicPhotographers = appState.photographers.filter((item) => item.published);
 
-const deleteStoredImage = async (item) => {
-  if (!item?.storagePath || !appState.firebaseReady) return;
-
-  try {
-    await deleteObject(ref(appState.storage, item.storagePath));
-  } catch (error) {
-    console.warn("Nao foi possivel remover a imagem do Storage.", error);
-  }
-};
-
-const renderInlineAdmin = () => {
-  document.querySelectorAll("[data-inline-admin]").forEach((item) => item.remove());
-  const content = appState.content;
-
-  document.querySelectorAll(".portfolio-gallery").forEach((gallery) => {
-    gallery.classList.add("inline-admin-scope");
-
-    const bar = document.createElement("div");
-    bar.className = "inline-admin-bar";
-    bar.dataset.inlineAdmin = "";
-    bar.innerHTML = `
-      <span>Albuns do portfolio</span>
-      <label>
-        Enviar album
-        <input type="file" accept="image/*" data-upload-album />
-      </label>
-      <button type="button" data-seed-content>Publicar padrao</button>
-    `;
-    gallery.before(bar);
-
-    gallery.querySelectorAll(".gallery-item").forEach((card, visibleIndex) => {
-      const realIndex = visibleIndexToRealIndex(content.albums, visibleIndex);
-      if (realIndex < 0) return;
-      const controls = document.createElement("div");
-      controls.className = "inline-admin-card";
-      controls.dataset.inlineAdmin = "";
-      controls.innerHTML = `
-        <button type="button" data-album-action="toggle" data-index="${realIndex}">Ocultar</button>
-        <button type="button" data-album-action="up" data-index="${realIndex}">Subir</button>
-        <button type="button" data-album-action="down" data-index="${realIndex}">Descer</button>
-        <button type="button" data-album-action="remove" data-index="${realIndex}">Remover</button>
-      `;
-      card.append(controls);
-    });
-  });
-
-  const slug = currentSlug();
-  const activeAlbum = content.albums.find((album) => album.slug === slug);
-  const categoryGallery = document.querySelector(".masonry.category-gallery");
-  if (activeAlbum && categoryGallery) {
-    categoryGallery.classList.add("inline-admin-scope");
-
-    const bar = document.createElement("div");
-    bar.className = "inline-admin-bar";
-    bar.dataset.inlineAdmin = "";
-    bar.innerHTML = `
-      <span>Fotos de ${activeAlbum.title}</span>
-      <label>
-        Enviar foto
-        <input type="file" accept="image/*" data-upload-photo="${activeAlbum.slug}" />
-      </label>
-    `;
-    categoryGallery.before(bar);
-
-    categoryGallery.querySelectorAll(".photo-item").forEach((item, visibleIndex) => {
-      const realIndex = visibleIndexToRealIndex(activeAlbum.photos, visibleIndex);
-      if (realIndex < 0) return;
-      const controls = document.createElement("figcaption");
-      controls.className = "inline-admin-card";
-      controls.dataset.inlineAdmin = "";
-      controls.innerHTML = `
-        <button type="button" data-photo-action="toggle" data-index="${realIndex}">Ocultar</button>
-        <button type="button" data-photo-action="up" data-index="${realIndex}">Subir</button>
-        <button type="button" data-photo-action="down" data-index="${realIndex}">Descer</button>
-        <button type="button" data-photo-action="remove" data-index="${realIndex}">Remover</button>
-      `;
-      item.append(controls);
-    });
-  }
-};
-
-document.addEventListener("click", async (event) => {
-  if (!document.body.classList.contains("admin-editing")) return;
-
-  const albumButton = event.target.closest("[data-album-action]");
-  const photoButton = event.target.closest("[data-photo-action]");
-  const seedButton = event.target.closest("[data-seed-content]");
-
-  if (albumButton) {
-    event.preventDefault();
-    event.stopPropagation();
-    const index = Number(albumButton.dataset.index);
-    const action = albumButton.dataset.albumAction;
-    await updateContent(async (content) => {
-      if (!content.albums[index]) return;
-      if (action === "toggle") content.albums[index].hidden = !content.albums[index].hidden;
-      if (action === "remove") {
-        const [album] = content.albums.splice(index, 1);
-        await Promise.all([deleteStoredImage(album), ...(album.photos || []).map(deleteStoredImage)]);
-      }
-      if (action === "up") moveItem(content.albums, index, index - 1);
-      if (action === "down") moveItem(content.albums, index, index + 1);
-    });
+  if (selectedId) {
+    const photographer = publicPhotographers.find((item) => item.uid === selectedId);
+    renderPhotographerDetail(gallery, photographer);
+    return;
   }
 
-  if (photoButton) {
-    event.preventDefault();
-    event.stopPropagation();
-    const index = Number(photoButton.dataset.index);
-    const action = photoButton.dataset.photoAction;
-    await updateContent(async (content) => {
-      const album = content.albums.find((item) => item.slug === currentSlug());
-      if (!album?.photos[index]) return;
-      if (action === "toggle") album.photos[index].hidden = !album.photos[index].hidden;
-      if (action === "remove") {
-        const [photo] = album.photos.splice(index, 1);
-        await deleteStoredImage(photo);
-        if (album.cover === photo.src) album.cover = album.photos.find((item) => !item.hidden)?.src || album.photos[0]?.src || "";
-      }
-      if (action === "up") moveItem(album.photos, index, index - 1);
-      if (action === "down") moveItem(album.photos, index, index + 1);
-    });
+  if (!publicPhotographers.length) {
+    renderDefaultPortfolio();
+    return;
   }
 
-  if (seedButton) {
-    event.preventDefault();
-    await updateContent((content) => {
-      content.albums = cloneDefaults();
-    });
-  }
-});
-
-document.addEventListener("change", async (event) => {
-  if (!document.body.classList.contains("admin-editing")) return;
-
-  const albumInput = event.target.closest("[data-upload-album]");
-  const photoInput = event.target.closest("[data-upload-photo]");
-
-  if (albumInput?.files?.length) {
-    const file = albumInput.files[0];
-    const title = prompt("Nome do album:", file.name.replace(/\.[^.]+$/, "")) || "Novo album";
-    const slug = slugify(title) || `album-${Date.now()}`;
-    const uploaded = await uploadImage(file, slug);
-    await updateContent((content) => {
-      content.albums.push({
-        slug,
-        title,
-        href: "#",
-        cover: uploaded.src,
-        storagePath: uploaded.storagePath,
-        hidden: false,
-        photos: [{ src: uploaded.src, storagePath: uploaded.storagePath, alt: title, hidden: false }],
-      });
-    });
-  }
-
-  if (photoInput?.files?.length) {
-    const album = appState.content.albums.find((item) => item.slug === currentSlug());
-    if (!album) return;
-    const file = photoInput.files[0];
-    const uploaded = await uploadImage(file, album.slug);
-    await updateContent((content) => {
-      const nextAlbum = content.albums.find((item) => item.slug === currentSlug());
-      nextAlbum.photos.push({ src: uploaded.src, storagePath: uploaded.storagePath, alt: file.name, hidden: false });
-      if (!nextAlbum.cover) nextAlbum.cover = uploaded.src;
-    });
-  }
-
-  event.target.value = "";
-});
-
-const renderAdminWorkspace = (adminShell) => {
-  adminShell.querySelector("[data-admin-workspace]")?.remove();
-
-  const workspace = document.createElement("div");
-  workspace.className = "mock-editor";
-  workspace.dataset.adminWorkspace = "";
-  workspace.innerHTML = `
-    <div class="mock-editor-title">
+  gallery.classList.add("photographer-directory");
+  gallery.classList.remove("photographer-detail-grid");
+  gallery.replaceChildren(...publicPhotographers.map((photographer) => {
+    const card = document.createElement("a");
+    card.className = "photographer-card";
+    card.href = `portfolio.html?fotografo=${encodeURIComponent(photographer.uid)}`;
+    card.innerHTML = `
+      <img src="${escapeHtml(photographer.coverUrl || photographer.photos?.[0]?.url || "assets/marilopes/empresarial.jpg")}" alt="${escapeHtml(photographer.displayName || "Fotografo")}" />
       <div>
-        <h3>Edicao inline ativada</h3>
-        <p>Feche este painel e use os controles diretamente nos albuns e fotos.</p>
+        <strong>${escapeHtml(photographer.displayName || "Fotografo")}</strong>
+        <span>${escapeHtml(photographer.city || "Portfolio online")}</span>
+        <p>${escapeHtml(photographer.bio || "Conheca o trabalho deste fotografo.")}</p>
       </div>
-      <span>Firebase conectado</span>
+    `;
+    return card;
+  }));
+};
+
+const renderPhotographerDetail = (gallery, photographer) => {
+  gallery.classList.add("photographer-detail-grid");
+  gallery.classList.remove("photographer-directory");
+
+  if (!photographer) {
+    gallery.innerHTML = `
+      <article class="platform-empty">
+        <h2>Portfolio nao encontrado</h2>
+        <p>Esse fotografo ainda nao publicou o perfil ou o link esta incorreto.</p>
+        <a class="text-button" href="portfolio.html">Ver fotografos</a>
+      </article>
+    `;
+    return;
+  }
+
+  const photos = Array.isArray(photographer.photos) ? photographer.photos : [];
+  const header = document.createElement("article");
+  header.className = "photographer-profile-head";
+  header.innerHTML = `
+    <a href="portfolio.html">Voltar aos fotografos</a>
+    <h2>${escapeHtml(photographer.displayName || "Fotografo")}</h2>
+    <p>${escapeHtml(photographer.bio || "")}</p>
+    <div class="profile-links">
+      ${photographer.city ? `<span>${escapeHtml(photographer.city)}</span>` : ""}
+      ${photographer.whatsapp ? `<a href="https://wa.me/${photographer.whatsapp.replace(/\D/g, "")}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ""}
+      ${photographer.instagram ? `<a href="${escapeHtml(photographer.instagram)}" target="_blank" rel="noopener noreferrer">Instagram</a>` : ""}
     </div>
   `;
-  adminShell.querySelector("[data-admin-panel]")?.append(workspace);
+
+  const nodes = photos.map((photo) => {
+    const figure = document.createElement("figure");
+    figure.className = "photographer-photo";
+    figure.innerHTML = `
+      <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.title || photographer.displayName || "Foto")}" />
+      ${photo.title ? `<figcaption>${escapeHtml(photo.title)}</figcaption>` : ""}
+    `;
+    return figure;
+  });
+
+  gallery.replaceChildren(header, ...(nodes.length ? nodes : [emptyState("Este fotografo ainda nao publicou fotos.")]));
 };
 
-const initializeContent = async () => {
+const emptyState = (message) => {
+  const item = document.createElement("article");
+  item.className = "platform-empty";
+  item.innerHTML = `<p>${message}</p>`;
+  return item;
+};
+
+const watchPhotographers = () => {
   if (!appState.firebaseReady) {
-    applyContent();
+    renderDefaultPortfolio();
     return;
   }
 
-  const snapshot = await getDoc(appState.contentRef);
-  if (!snapshot.exists()) {
-    await setDoc(appState.contentRef, { albums: cloneDefaults() });
-  }
-
-  onSnapshot(appState.contentRef, (docSnapshot) => {
-    appState.content = normalizeContent(docSnapshot.data());
-    applyContent();
+  onSnapshot(doc(appState.db, "platform", "directory"), (snapshot) => {
+    const data = snapshot.data();
+    appState.photographers = Array.isArray(data?.photographers) ? data.photographers : [];
+    renderPhotographerCards();
   });
 };
 
-await initializeContent();
+const saveDirectoryProfile = async (uid, profile) => {
+  const directoryRef = doc(appState.db, "platform", "directory");
+  const snapshot = await getDoc(directoryRef);
+  const current = Array.isArray(snapshot.data()?.photographers) ? snapshot.data().photographers : [];
+  const publicProfile = {
+    uid,
+    displayName: profile.displayName || "",
+    city: profile.city || "",
+    bio: profile.bio || "",
+    whatsapp: profile.whatsapp || "",
+    instagram: profile.instagram || "",
+    coverUrl: profile.coverUrl || "",
+    photos: Array.isArray(profile.photos) ? profile.photos : [],
+    published: Boolean(profile.published),
+  };
+  const next = [publicProfile, ...current.filter((item) => item.uid !== uid)];
+  await setDoc(directoryRef, { photographers: next, updatedAt: serverTimestamp() }, { merge: true });
+};
 
-const siteFooter = document.querySelector(".site-footer");
+const readOwnProfile = async (user) => {
+  const snapshot = await getDoc(userDoc(user.uid));
+  appState.profile = snapshot.exists()
+    ? snapshot.data()
+    : { uid: user.uid, email: user.email, name: user.email, role: "cliente" };
 
-if (siteFooter) {
-  const existingAdminShell = document.querySelector("[data-admin-static]");
-  const adminShell = existingAdminShell || document.createElement("section");
-  if (!existingAdminShell) {
-    adminShell.className = "admin-access";
-    adminShell.setAttribute("aria-label", "Administracao");
-    adminShell.innerHTML = `
-      <details>
-        <summary>Login administrativo</summary>
-        <form class="admin-form" data-admin-login>
-          <label>
-            Email
-            <input name="login" type="email" autocomplete="username" />
-          </label>
-          <label>
-            Senha
-            <input name="password" type="password" autocomplete="current-password" />
-          </label>
-          <button type="submit">Entrar</button>
-          <p class="admin-message" data-admin-message></p>
-        </form>
-        <div class="admin-panel" data-admin-panel hidden>
-          <div class="admin-panel-top">
-            <strong>Edicao do site</strong>
-            <span>Biblioteca de albuns conectada ao Firebase.</span>
-          </div>
-          <button type="button" data-admin-logout>Sair</button>
-        </div>
-      </details>
-    `;
-
-    siteFooter.insertAdjacentElement("afterend", adminShell);
+  if (appState.profile.role === "fotografo") {
+    const photographerSnapshot = await getDoc(photographerDoc(user.uid));
+    appState.profile.photographer = photographerSnapshot.exists()
+      ? photographerSnapshot.data()
+      : {
+          displayName: appState.profile.name || "",
+          city: "",
+          bio: "",
+          whatsapp: "",
+          instagram: "",
+          coverUrl: "",
+          photos: [],
+          published: false,
+        };
   }
+};
 
-  const adminLauncher = document.querySelector("[data-admin-launcher]") || document.createElement("button");
-  adminLauncher.className = "admin-launcher";
-  if (adminLauncher.tagName === "BUTTON") adminLauncher.type = "button";
-  adminLauncher.textContent = "Admin";
-  adminLauncher.dataset.adminLauncher = "";
-  adminLauncher.setAttribute("aria-label", "Abrir login administrativo");
-  if (!adminLauncher.isConnected) document.body.append(adminLauncher);
-
-  const adminForm = adminShell.querySelector("[data-admin-login]");
-  const adminPanel = adminShell.querySelector("[data-admin-panel]");
-  const adminMessage = adminShell.querySelector("[data-admin-message]");
-  const adminLogout = adminShell.querySelector("[data-admin-logout]");
-  const adminDetails = adminShell.querySelector("details");
-  const adminToggle = document.querySelector("#landing-admin-toggle");
-
-  adminLauncher.addEventListener("click", (event) => {
-    event.preventDefault();
-    if (adminToggle) adminToggle.checked = true;
-    adminDetails.open = true;
-    adminShell.classList.add("is-open");
-    adminShell.querySelector("input")?.focus();
-  });
-
-  const setAdminState = (isLoggedIn) => {
-    adminForm.hidden = isLoggedIn;
-    adminPanel.hidden = !isLoggedIn;
-    document.body.classList.toggle("admin-editing", isLoggedIn);
-
-    if (isLoggedIn) {
-      adminMessage.textContent = "";
-      if (adminToggle) adminToggle.checked = false;
-      adminShell.classList.remove("is-open");
-      renderAdminWorkspace(adminShell);
-      renderInlineAdmin();
-    } else {
-      adminShell.querySelector("[data-admin-workspace]")?.remove();
-      document.querySelectorAll("[data-inline-admin]").forEach((item) => item.remove());
-      document.querySelectorAll(".inline-admin-scope").forEach((item) => item.classList.remove("inline-admin-scope"));
-    }
+const savePhotographerProfile = async (form) => {
+  const formData = new FormData(form);
+  const profile = {
+    displayName: cleanText(formData.get("displayName")),
+    city: cleanText(formData.get("city")),
+    bio: cleanText(formData.get("bio")),
+    whatsapp: cleanText(formData.get("whatsapp")),
+    instagram: cleanText(formData.get("instagram")),
+    coverUrl: cleanText(formData.get("coverUrl")),
+    categories: splitList(formData.get("categories")),
+    published: formData.get("published") === "on",
+    updatedAt: serverTimestamp(),
   };
 
-  if (appState.firebaseReady) {
-    onAuthStateChanged(appState.auth, (user) => setAdminState(Boolean(user)));
+  const currentPhotos = appState.profile?.photographer?.photos || [];
+  const nextProfile = { ...appState.profile.photographer, ...profile, photos: currentPhotos };
+  await setDoc(photographerDoc(appState.user.uid), nextProfile, { merge: true });
+  await saveDirectoryProfile(appState.user.uid, nextProfile);
+  appState.profile.photographer = nextProfile;
+};
+
+const addPhoto = async (form) => {
+  const formData = new FormData(form);
+  const url = cleanText(formData.get("photoUrl"));
+  if (!url) return;
+
+  const current = appState.profile?.photographer || {};
+  const photos = Array.isArray(current.photos) ? current.photos : [];
+  const nextProfile = {
+    ...current,
+    coverUrl: current.coverUrl || url,
+    photos: [...photos, { url, title: cleanText(formData.get("photoTitle"), "Foto"), createdAt: Date.now() }],
+    updatedAt: serverTimestamp(),
+  };
+  await setDoc(photographerDoc(appState.user.uid), nextProfile, { merge: true });
+  await saveDirectoryProfile(appState.user.uid, nextProfile);
+  appState.profile.photographer = nextProfile;
+  form.reset();
+};
+
+const removePhoto = async (index) => {
+  const current = appState.profile?.photographer || {};
+  const photos = Array.isArray(current.photos) ? [...current.photos] : [];
+  photos.splice(index, 1);
+  const nextProfile = { ...current, photos, coverUrl: current.coverUrl || photos[0]?.url || "", updatedAt: serverTimestamp() };
+  await setDoc(photographerDoc(appState.user.uid), nextProfile, { merge: true });
+  await saveDirectoryProfile(appState.user.uid, nextProfile);
+  appState.profile.photographer = nextProfile;
+};
+
+const buildAccountShell = () => {
+  let shell = document.querySelector("[data-admin-static]");
+  const siteFooter = document.querySelector(".site-footer");
+
+  if (!shell) {
+    shell = document.createElement("section");
+    shell.className = "admin-access";
+    shell.dataset.adminStatic = "";
+    shell.setAttribute("aria-label", "Conta");
+    shell.innerHTML = `
+      <details open>
+        <summary>Conta</summary>
+        <div data-account-root></div>
+      </details>
+    `;
+    siteFooter?.insertAdjacentElement("afterend", shell);
   } else {
-    setAdminState(false);
-    adminMessage.textContent = "Configure firebase-config.js para habilitar o login.";
+    shell.querySelector("details").innerHTML = `<summary>Conta</summary><div data-account-root></div>`;
   }
 
-  adminForm.addEventListener("submit", async (event) => {
+  let launcher = document.querySelector("[data-admin-launcher]");
+  if (!launcher) {
+    launcher = document.createElement("button");
+    launcher.type = "button";
+    launcher.className = "admin-launcher";
+    launcher.dataset.adminLauncher = "";
+    document.body.append(launcher);
+  }
+
+  launcher.textContent = "Entrar";
+  launcher.setAttribute("aria-label", "Abrir conta");
+  launcher.addEventListener("click", (event) => {
     event.preventDefault();
-    if (!appState.firebaseReady) {
-      adminMessage.textContent = "Configure firebase-config.js para habilitar o login.";
+    shell.classList.add("is-open");
+    shell.querySelector("details").open = true;
+    shell.querySelector("input, button, textarea")?.focus();
+  });
+
+  shell.addEventListener("click", (event) => {
+    if (event.target === shell) shell.classList.remove("is-open");
+  });
+
+  return shell;
+};
+
+const renderAuthForms = (root, message = "") => {
+  root.innerHTML = `
+    <div class="account-grid">
+      <form class="account-form" data-login-form>
+        <h3>Entrar</h3>
+        <label>Email<input name="email" type="email" autocomplete="username" required /></label>
+        <label>Senha<input name="password" type="password" autocomplete="current-password" required /></label>
+        <button type="submit">Entrar</button>
+      </form>
+      <form class="account-form" data-register-form>
+        <h3>Criar conta</h3>
+        <label>Nome<input name="name" autocomplete="name" required /></label>
+        <label>Email<input name="email" type="email" autocomplete="email" required /></label>
+        <label>Senha<input name="password" type="password" autocomplete="new-password" minlength="6" required /></label>
+        <label>Tipo
+          <select name="role" required>
+            <option value="fotografo">Fotografo</option>
+            <option value="cliente">Cliente</option>
+          </select>
+        </label>
+        <button type="submit">Cadastrar</button>
+      </form>
+    </div>
+    <p class="admin-message" data-account-message>${message}</p>
+  `;
+};
+
+const renderDashboard = (root) => {
+  const profile = appState.profile || {};
+  const photographer = profile.photographer || {};
+  const photos = Array.isArray(photographer.photos) ? photographer.photos : [];
+
+  if (profile.role !== "fotografo") {
+    root.innerHTML = `
+      <div class="account-panel">
+        <div class="admin-panel-top">
+          <strong>Conta de cliente</strong>
+          <span>${escapeHtml(profile.name || profile.email)}</span>
+        </div>
+        <p>Seu cadastro esta salvo. A proxima etapa do projeto pode incluir favoritos, pedidos de orcamento e contato direto com fotografos.</p>
+        <button type="button" data-account-logout>Sair</button>
+      </div>
+    `;
+    return;
+  }
+
+  root.innerHTML = `
+    <div class="account-panel">
+      <div class="admin-panel-top">
+        <strong>Area do fotografo</strong>
+        <span>${escapeHtml(profile.email || "")}</span>
+      </div>
+      <form class="account-form" data-photographer-form>
+        <label>Nome publico<input name="displayName" value="${escapeHtml(photographer.displayName || profile.name || "")}" required /></label>
+        <label>Cidade<input name="city" value="${escapeHtml(photographer.city || "")}" placeholder="Manaus - AM" /></label>
+        <label>Bio<textarea name="bio" rows="3" placeholder="Fale sobre seu estilo e atendimento">${escapeHtml(photographer.bio || "")}</textarea></label>
+        <label>WhatsApp<input name="whatsapp" value="${escapeHtml(photographer.whatsapp || "")}" placeholder="5592999999999" /></label>
+        <label>Instagram<input name="instagram" value="${escapeHtml(photographer.instagram || "")}" placeholder="https://instagram.com/seuperfil" /></label>
+        <label>Categorias<input name="categories" value="${escapeHtml((photographer.categories || []).join(", "))}" placeholder="Casamento, gestante, eventos" /></label>
+        <label>Foto de capa por URL<input name="coverUrl" value="${escapeHtml(photographer.coverUrl || "")}" placeholder="https://..." /></label>
+        <label class="account-check"><input name="published" type="checkbox" ${photographer.published ? "checked" : ""} /> Publicar meu portfolio</label>
+        <button type="submit">Salvar perfil</button>
+      </form>
+      <form class="account-form compact" data-photo-form>
+        <h3>Adicionar foto</h3>
+        <label>Titulo<input name="photoTitle" placeholder="Ensaio externo" /></label>
+        <label>URL da imagem<input name="photoUrl" type="url" placeholder="https://..." required /></label>
+        <button type="submit">Adicionar foto</button>
+      </form>
+      <div class="photo-manager">
+        ${photos.map((photo, index) => `
+          <article>
+            <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.title || "Foto")}" />
+            <span>${escapeHtml(photo.title || "Foto")}</span>
+            <button type="button" data-remove-photo="${index}">Remover</button>
+          </article>
+        `).join("") || `<p class="mock-empty">Adicione links de fotos para montar seu portfolio.</p>`}
+      </div>
+      <button type="button" data-account-logout>Sair</button>
+      <p class="admin-message" data-account-message></p>
+    </div>
+  `;
+};
+
+const initializeAccount = () => {
+  const shell = buildAccountShell();
+  const root = shell.querySelector("[data-account-root]");
+
+  if (!appState.firebaseReady) {
+    renderAuthForms(root, "Configure o Firebase em firebase-config.js para ativar cadastro e login.");
+    return;
+  }
+
+  onAuthStateChanged(appState.auth, async (user) => {
+    appState.user = user;
+    document.querySelector("[data-admin-launcher]").textContent = user ? "Conta" : "Entrar";
+
+    if (!user) {
+      appState.profile = null;
+      renderAuthForms(root);
       return;
     }
 
-    const formData = new FormData(adminForm);
-    const email = String(formData.get("login") || "").trim();
-    const password = String(formData.get("password") || "");
+    await readOwnProfile(user);
+    renderDashboard(root);
+  });
+
+  root.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const loginForm = event.target.closest("[data-login-form]");
+    const registerForm = event.target.closest("[data-register-form]");
+    const photographerForm = event.target.closest("[data-photographer-form]");
+    const photoForm = event.target.closest("[data-photo-form]");
+    const message = root.querySelector("[data-account-message]");
 
     try {
-      await signInWithEmailAndPassword(appState.auth, email, password);
-      adminForm.reset();
-    } catch {
-      adminMessage.textContent = "Login invalido.";
+      if (loginForm) {
+        const formData = new FormData(loginForm);
+        await signInWithEmailAndPassword(appState.auth, cleanText(formData.get("email")), String(formData.get("password") || ""));
+        loginForm.reset();
+      }
+
+      if (registerForm) {
+        const formData = new FormData(registerForm);
+        const credential = await createUserWithEmailAndPassword(appState.auth, cleanText(formData.get("email")), String(formData.get("password") || ""));
+        const profile = {
+          uid: credential.user.uid,
+          name: cleanText(formData.get("name")),
+          email: cleanText(formData.get("email")),
+          role: cleanText(formData.get("role"), "cliente"),
+          createdAt: serverTimestamp(),
+        };
+        await setDoc(userDoc(credential.user.uid), profile);
+        if (profile.role === "fotografo") {
+          const photographer = {
+            displayName: profile.name,
+            city: "",
+            bio: "",
+            whatsapp: "",
+            instagram: "",
+            coverUrl: "",
+            categories: [],
+            photos: [],
+            published: false,
+            createdAt: serverTimestamp(),
+          };
+          await setDoc(photographerDoc(credential.user.uid), photographer);
+        }
+        registerForm.reset();
+      }
+
+      if (photographerForm) {
+        await savePhotographerProfile(photographerForm);
+        renderDashboard(root);
+      }
+
+      if (photoForm) {
+        await addPhoto(photoForm);
+        renderDashboard(root);
+      }
+    } catch (error) {
+      if (message) message.textContent = error?.code === "auth/email-already-in-use" ? "Este email ja esta cadastrado." : "Nao foi possivel concluir. Confira os dados e tente novamente.";
     }
   });
 
-  adminLogout.addEventListener("click", async () => {
-    if (appState.firebaseReady) await signOut(appState.auth);
-    if (adminToggle) adminToggle.checked = false;
-    adminShell.classList.remove("is-open");
+  root.addEventListener("click", async (event) => {
+    const logout = event.target.closest("[data-account-logout]");
+    const remove = event.target.closest("[data-remove-photo]");
+
+    if (logout) {
+      await signOut(appState.auth);
+      shell.classList.remove("is-open");
+    }
+
+    if (remove) {
+      await removePhoto(Number(remove.dataset.removePhoto));
+      renderDashboard(root);
+    }
   });
-}
+};
+
+renderDefaultPortfolio();
+watchPhotographers();
+initializeAccount();

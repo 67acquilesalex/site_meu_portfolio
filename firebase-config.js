@@ -1,8 +1,9 @@
 export const firebaseConfig = {
-  apiKey: "COLE_AQUI",
-  authDomain: "COLE_AQUI",
-  projectId: "COLE_AQUI",
-  storageBucket: "COLE_AQUI",
-  messagingSenderId: "COLE_AQUI",
-  appId: "COLE_AQUI",
+  apiKey: "AIzaSyDQLbEXhYvyYdg_kpCM91AooFGTubc",
+  authDomain: "portfolio-4621d.firebaseapp.com",
+  projectId: "portfolio-4621d",
+  storageBucket: "portfolio-4621d.firebasestorage.app",
+  messagingSenderId: "673609616202",
+  appId: "1:673609616202:web:79d1bef3d87c68bcaacfb3",
+  measurementId: "G-KT9HWJ8RFX",
 };

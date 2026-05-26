@@ -36,25 +36,25 @@ Site estatico pronto para publicar na Vercel, agora separado por paginas.
 
 Depois do deploy, conecte o dominio da Hostinger em `Project Settings > Domains` na Vercel e configure o DNS conforme as instrucoes exibidas.
 
-## Admin com Firebase
+## Plataforma com Firebase
 
-O admin usa Firebase no plano Spark, mantendo a edicao inline no proprio site:
+O site usa Firebase no plano Spark, sem Firebase Storage:
 
-- Firebase Auth faz o login administrativo por e-mail e senha.
-- Firestore salva albuns, ordem, visibilidade, titulos e metadados das fotos em `portfolio/content`.
-- Firebase Storage salva uploads em `portfolio/{albumSlug}/`.
-- Visitantes continuam vendo o portfolio normalmente.
-- Depois do login, aparecem controles inline para enviar, remover, ocultar e reordenar albuns e fotos.
+- Firebase Auth faz cadastro e login por e-mail e senha.
+- Firestore salva usuarios em `users/{uid}`.
+- Fotógrafos salvam perfil, contatos e links de fotos em `photographers/{uid}`.
+- A listagem publica dos fotografos fica em `platform/directory`.
+- As imagens devem ser adicionadas por URL externa, por exemplo Cloudinary, Imgur ou outro host de imagens.
+- O Firebase Storage nao e usado porque exige upgrade do projeto.
 
 Para ativar:
 
 1. Crie um projeto no Firebase.
 2. Ative Authentication com provedor Email/Password.
-3. Crie o usuario administrativo em Authentication > Users.
+3. Os usuarios podem ser criados pelo proprio site.
 4. Ative Firestore Database.
-5. Ative Storage.
-6. Copie a configuracao Web App do Firebase para `firebase-config.js`.
-7. Publique na Vercel.
+5. Copie a configuracao Web App do Firebase para `firebase-config.js`.
+6. Publique na Vercel.
 
 Regras iniciais sugeridas para Firestore:
 
@@ -62,23 +62,20 @@ Regras iniciais sugeridas para Firestore:
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /portfolio/content {
+    match /platform/directory {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "fotografo";
     }
-  }
-}
-```
 
-Regras iniciais sugeridas para Storage:
+    match /users/{userId} {
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
 
-```js
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /portfolio/{allPaths=**} {
+    match /photographers/{userId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
