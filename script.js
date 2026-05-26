@@ -149,6 +149,18 @@ const escapeHtml = (value) =>
     '"': "&quot;",
     "'": "&#39;",
   })[char]);
+const authErrorMessage = (error) => {
+  const code = error?.code || "";
+  const messages = {
+    "auth/email-already-in-use": "Este email ja esta cadastrado.",
+    "auth/invalid-email": "Email invalido.",
+    "auth/weak-password": "A senha precisa ter pelo menos 6 caracteres.",
+    "auth/operation-not-allowed": "Email/senha ainda nao esta ativado no Firebase Authentication.",
+    "auth/unauthorized-domain": "Este dominio nao esta autorizado no Firebase Authentication.",
+    "permission-denied": "O Firestore negou a escrita. Verifique as regras.",
+  };
+  return messages[code] || error?.message || "Nao foi possivel concluir a operacao.";
+};
 const userDoc = (uid) => doc(appState.db, "users", uid);
 const photographerDoc = (uid) => doc(appState.db, "photographers", uid);
 
@@ -392,13 +404,13 @@ const buildAccountShell = () => {
     shell.setAttribute("aria-label", "Conta");
     shell.innerHTML = `
       <details open>
-        <summary>Conta</summary>
+        <summary>Entrar</summary>
         <div data-account-root></div>
       </details>
     `;
-    siteFooter?.insertAdjacentElement("afterend", shell);
+    document.body.append(shell);
   } else {
-    shell.querySelector("details").innerHTML = `<summary>Conta</summary><div data-account-root></div>`;
+    shell.querySelector("details").innerHTML = `<summary>Entrar</summary><div data-account-root></div>`;
   }
 
   let launcher = document.querySelector("[data-admin-launcher]");
@@ -410,7 +422,7 @@ const buildAccountShell = () => {
     document.body.append(launcher);
   }
 
-  launcher.textContent = "Entrar";
+  launcher.textContent = "Conta";
   launcher.setAttribute("aria-label", "Abrir conta");
   launcher.addEventListener("click", (event) => {
     event.preventDefault();
@@ -428,6 +440,11 @@ const buildAccountShell = () => {
 
 const renderAuthForms = (root, message = "") => {
   root.innerHTML = `
+    <div class="auth-intro">
+      <span>Acesso do site</span>
+      <h1>Entre ou crie sua conta para publicar portfólios</h1>
+      <p>Fotógrafos publicam fotos e dados do perfil. Clientes criam conta para acompanhar o site e futuras interações.</p>
+    </div>
     <div class="account-grid">
       <form class="account-form" data-login-form>
         <h3>Entrar</h3>
@@ -521,15 +538,19 @@ const initializeAccount = () => {
 
   onAuthStateChanged(appState.auth, async (user) => {
     appState.user = user;
-    document.querySelector("[data-admin-launcher]").textContent = user ? "Conta" : "Entrar";
+    document.body.classList.toggle("auth-gated", !user);
+    document.querySelector("[data-admin-launcher]").hidden = !user;
 
     if (!user) {
       appState.profile = null;
+      shell.classList.add("is-open");
+      shell.querySelector("details").open = true;
       renderAuthForms(root);
       return;
     }
 
     await readOwnProfile(user);
+    shell.classList.remove("is-open");
     renderDashboard(root);
   });
 
@@ -587,7 +608,7 @@ const initializeAccount = () => {
         renderDashboard(root);
       }
     } catch (error) {
-      if (message) message.textContent = error?.code === "auth/email-already-in-use" ? "Este email ja esta cadastrado." : "Nao foi possivel concluir. Confira os dados e tente novamente.";
+      if (message) message.textContent = authErrorMessage(error);
     }
   });
 

@@ -394,17 +394,19 @@ button {
 .admin-access {
   position: fixed;
   inset: 0;
-  z-index: 999;
+  z-index: 9999;
   display: none;
-  padding: 80px 16px 22px;
+  place-items: center;
+  padding: 24px;
   color: #4f4a46;
-  background: rgba(44, 44, 43, 0.28);
+  background: rgba(44, 44, 43, 0.36);
+  backdrop-filter: blur(3px);
   font-size: 12px;
   overflow: auto;
 }
 
 .admin-access.is-open {
-  display: block;
+  display: grid;
 }
 
 .admin-toggle:checked + .admin-launcher + .admin-access-static,
@@ -439,13 +441,27 @@ button {
   background: #fff;
 }
 
+body.auth-gated .site-header,
+body.auth-gated main,
+body.auth-gated .site-footer {
+  filter: blur(1.5px) grayscale(0.15);
+  pointer-events: none;
+  user-select: none;
+}
+
+body.auth-gated .admin-launcher {
+  display: none;
+}
+
 .admin-access details {
   width: min(1040px, 100%);
+  max-height: calc(100vh - 48px);
   margin: 0 auto;
   background: #eee2d2;
   border: 1px solid rgba(86, 68, 54, 0.24);
   box-shadow: 0 24px 70px rgba(44, 44, 43, 0.24);
   padding: 16px;
+  overflow: auto;
 }
 
 .admin-access summary {
@@ -536,6 +552,37 @@ button {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+.auth-intro {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(86, 68, 54, 0.16);
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.auth-intro span {
+  color: var(--line);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.auth-intro h1 {
+  margin: 0;
+  color: var(--line);
+  font-size: clamp(26px, 3vw, 40px);
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.auth-intro p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .account-form,
