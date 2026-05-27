@@ -130,11 +130,17 @@ const authErrorMessage = (error) => {
   const messages = {
     "auth/email-already-in-use": "Este email já está cadastrado.",
     "auth/invalid-email": "Email inválido.",
+    "auth/invalid-credential": "Email ou senha incorretos.",
+    "auth/user-not-found": "Nao existe conta com este email.",
+    "auth/wrong-password": "Senha incorreta.",
+    "auth/missing-password": "Digite a senha.",
     "auth/weak-password": "A senha precisa ter pelo menos 6 caracteres.",
+    "auth/network-request-failed": "Nao foi possivel conectar ao Firebase. Verifique sua internet e tente de novo.",
     "auth/operation-not-allowed": "Email/senha ainda não está ativado no Firebase Authentication.",
     "auth/unauthorized-domain": "Este domínio não está autorizado no Firebase Authentication.",
     "auth/api-key-not-valid.-please-pass-a-valid-api-key.": "A chave do Firebase é inválida. Copie novamente a configuração Web App do seu projeto Firebase.",
     "auth/invalid-api-key": "A chave do Firebase é inválida. Copie novamente a configuração Web App do seu projeto Firebase.",
+    "auth/app-not-authorized": "Este dominio nao esta autorizado para usar esta chave do Firebase.",
     "permission-denied": "O Firestore negou a escrita. Verifique as regras.",
   };
   return messages[error?.code] || error?.message || "Não foi possível concluir a operação.";
@@ -400,6 +406,24 @@ const photographerDoc = (uid) => appState.modules.firestore.doc(appState.db, "ph
 const directoryDoc = () => appState.modules.firestore.doc(appState.db, "platform", "directory");
 const timestamp = () => appState.modules.firestore.serverTimestamp();
 
+const setAccountMessage = (root, message) => {
+  const node = root.querySelector("[data-account-message]");
+  if (node) node.textContent = message || "";
+};
+
+const setFormBusy = (form, busy, label = "Aguarde...") => {
+  if (!form) return;
+  const button = form.querySelector('button[type="submit"]');
+  if (button) {
+    if (!button.dataset.defaultText) button.dataset.defaultText = button.textContent;
+    button.textContent = busy ? label : button.dataset.defaultText;
+  }
+
+  form.querySelectorAll("button, input, select, textarea").forEach((control) => {
+    control.disabled = busy;
+  });
+};
+
 const watchPhotographers = () => {
   if (!appState.firebaseReady) {
     renderDefaultPortfolio();
@@ -589,7 +613,7 @@ const renderAuthForms = (root, message = "") => {
   `;
 };
 
-const renderDashboard = (root) => {
+const renderDashboard = (root, message = "") => {
   const profile = appState.profile || {};
   const photographer = profile.photographer || {};
   const photos = Array.isArray(photographer.photos) ? photographer.photos : [];
@@ -602,6 +626,7 @@ const renderDashboard = (root) => {
           <span>${escapeHtml(profile.name || profile.email)}</span>
         </div>
         <p>Seu cadastro está salvo. A próxima etapa pode incluir favoritos, pedidos de orçamento e contato direto com fotógrafos.</p>
+        <p class="admin-message" data-account-message>${escapeHtml(message)}</p>
         <button type="button" data-account-logout>Sair</button>
       </div>
     `;
@@ -641,7 +666,7 @@ const renderDashboard = (root) => {
         `).join("") || `<p class="mock-empty">Adicione links de fotos para montar seu portfólio.</p>`}
       </div>
       <button type="button" data-account-logout>Sair</button>
-      <p class="admin-message" data-account-message></p>
+      <p class="admin-message" data-account-message>${escapeHtml(message)}</p>
     </div>
   `;
 };
@@ -649,6 +674,7 @@ const renderDashboard = (root) => {
 const initializeAccount = () => {
   const shell = buildAccountShell();
   const root = shell.querySelector("[data-account-root]");
+  let accountSubmitInProgress = false;
 
   if (!appState.firebaseReady) {
     renderAuthForms(root, appState.firebaseError || "Configure o Firebase em firebase-config.js para ativar cadastro e login.");
@@ -656,6 +682,8 @@ const initializeAccount = () => {
   }
 
   appState.modules.auth.onAuthStateChanged(appState.auth, async (user) => {
+    if (accountSubmitInProgress) return;
+
     appState.user = user;
 
     if (!user) {
@@ -664,9 +692,14 @@ const initializeAccount = () => {
       return;
     }
 
-    await readOwnProfile(user);
-    renderDashboard(root);
-    shell.classList.remove("is-open");
+    try {
+      await readOwnProfile(user);
+      renderDashboard(root);
+      shell.classList.remove("is-open");
+    } catch (error) {
+      renderAuthForms(root, authErrorMessage(error));
+      shell.classList.add("is-open");
+    }
   });
 
   root.addEventListener("submit", async (event) => {
@@ -675,17 +708,25 @@ const initializeAccount = () => {
     const registerForm = event.target.closest("[data-register-form]");
     const photographerForm = event.target.closest("[data-photographer-form]");
     const photoForm = event.target.closest("[data-photo-form]");
-    const message = root.querySelector("[data-account-message]");
-    if (message) message.textContent = "";
+    const activeForm = loginForm || registerForm || photographerForm || photoForm;
+    setAccountMessage(root, "");
 
     try {
       if (loginForm) {
+        accountSubmitInProgress = true;
+        setFormBusy(loginForm, true, "Entrando...");
         const formData = new FormData(loginForm);
-        await appState.modules.auth.signInWithEmailAndPassword(appState.auth, cleanText(formData.get("email")), String(formData.get("password") || ""));
+        const credential = await appState.modules.auth.signInWithEmailAndPassword(appState.auth, cleanText(formData.get("email")), String(formData.get("password") || ""));
+        appState.user = credential.user;
+        await readOwnProfile(credential.user);
+        renderDashboard(root, "Login realizado.");
+        shell.classList.add("is-open");
         loginForm.reset();
       }
 
       if (registerForm) {
+        accountSubmitInProgress = true;
+        setFormBusy(registerForm, true, "Criando conta...");
         const formData = new FormData(registerForm);
         const credential = await appState.modules.auth.createUserWithEmailAndPassword(
           appState.auth,
@@ -699,10 +740,11 @@ const initializeAccount = () => {
           role: cleanText(formData.get("role"), "cliente"),
           createdAt: timestamp(),
         };
+        appState.user = credential.user;
         await appState.modules.firestore.setDoc(userDoc(credential.user.uid), profile);
 
         if (profile.role === "fotografo") {
-          await appState.modules.firestore.setDoc(photographerDoc(credential.user.uid), {
+          const photographerProfile = {
             displayName: profile.name,
             city: "",
             bio: "",
@@ -713,23 +755,33 @@ const initializeAccount = () => {
             photos: [],
             published: false,
             createdAt: timestamp(),
-          });
+          };
+          await appState.modules.firestore.setDoc(photographerDoc(credential.user.uid), photographerProfile);
+          profile.photographer = photographerProfile;
         }
 
+        appState.profile = profile;
+        renderDashboard(root, "Cadastro criado.");
+        shell.classList.add("is-open");
         registerForm.reset();
       }
 
       if (photographerForm) {
+        setFormBusy(photographerForm, true, "Salvando...");
         await savePhotographerProfile(photographerForm);
-        renderDashboard(root);
+        renderDashboard(root, "Perfil salvo.");
       }
 
       if (photoForm) {
+        setFormBusy(photoForm, true, "Adicionando...");
         await addPhoto(photoForm);
-        renderDashboard(root);
+        renderDashboard(root, "Foto adicionada.");
       }
     } catch (error) {
-      if (message) message.textContent = authErrorMessage(error);
+      setAccountMessage(root, authErrorMessage(error));
+    } finally {
+      accountSubmitInProgress = false;
+      setFormBusy(activeForm, false);
     }
   });
 

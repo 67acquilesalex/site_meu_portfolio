@@ -989,6 +989,14 @@ button {
   background: var(--sage-dark);
 }
 
+.account-form button:disabled,
+.account-form input:disabled,
+.account-form select:disabled,
+.account-form textarea:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
 .admin-panel-top strong {
   color: var(--line);
   font-size: 14px;
