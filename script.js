@@ -1,107 +1,30 @@
 import { firebaseConfig } from "./firebase-config.js";
-
-const contact = {
-  brand: "Portfólios Fotográficos",
-  tagline: "Páginas profissionais para fotógrafos",
-  logo: "",
-  email: "contato@portfoliofotografico.com",
-  location: "Brasil",
-  whatsapp: "5592999999999",
-};
-
-const albums = [
-  {
-    slug: "gestante",
-    title: "Ensaio de gestante",
-    description: "Ensaios delicados para registrar a espera com beleza, calma e direção cuidadosa.",
-    href: "gestante.html",
-    cover: "assets/marilopes/gestante.jpg",
-    cta: "Pedir orçamento gestante",
-    photos: [
-      ["assets/marilopes/gestante.jpg", "Ensaio de gestante"],
-      ["assets/marilopes/feminino.jpg", "Retrato feminino"],
-      ["assets/marilopes/casal.jpg", "Ensaio externo"],
-    ],
-  },
-  {
-    slug: "familia",
-    title: "Ensaio de família",
-    description: "Registros naturais para guardar afeto, rotina e os detalhes de cada fase.",
-    href: "familia.html",
-    cover: "assets/marilopes/familia.jpg",
-    cta: "Pedir orçamento de família",
-    photos: [
-      ["assets/marilopes/familia.jpg", "Ensaio de família"],
-      ["assets/marilopes/casal.jpg", "Família em ambiente natural"],
-      ["assets/marilopes/gestante.jpg", "Retrato familiar"],
-    ],
-  },
-  {
-    slug: "casal",
-    title: "Ensaio de casal",
-    description: "Ensaios para registrar conexão, presença e histórias compartilhadas com direção leve.",
-    href: "casal.html",
-    cover: "assets/marilopes/casal.jpg",
-    cta: "Pedir orçamento casal",
-    photos: [
-      ["assets/marilopes/casal.jpg", "Ensaio de casal"],
-      ["assets/marilopes/familia.jpg", "Casal em ambiente natural"],
-      ["assets/marilopes/feminino.jpg", "Retrato em ensaio externo"],
-    ],
-  },
-  {
-    slug: "feminino",
-    title: "Ensaio feminino",
-    description: "Retratos femininos com naturalidade, direção cuidadosa e estética limpa.",
-    href: "feminino.html",
-    cover: "assets/marilopes/feminino.jpg",
-    cta: "Pedir orçamento feminino",
-    photos: [
-      ["assets/marilopes/feminino.jpg", "Ensaio feminino"],
-      ["assets/marilopes/gestante.jpg", "Retrato feminino em praia"],
-      ["assets/marilopes/empresarial.jpg", "Retrato feminino profissional"],
-    ],
-  },
-  {
-    slug: "empresarial",
-    title: "Ensaio empresarial",
-    description: "Fotos profissionais para marca pessoal, equipes, clínicas, escritórios e conteúdo institucional.",
-    href: "empresarial.html",
-    cover: "assets/marilopes/empresarial.jpg",
-    cta: "Pedir orçamento empresarial",
-    photos: [
-      ["assets/marilopes/empresarial.jpg", "Ensaio empresarial"],
-      ["assets/marilopes/feminino.jpg", "Retrato profissional"],
-      ["assets/marilopes/imoveis.jpg", "Ambiente comercial"],
-    ],
-  },
-  {
-    slug: "imoveis",
-    title: "Fotografia de imóveis",
-    description: "Fotografia de interiores e espaços com composição limpa, luz natural e atenção aos detalhes.",
-    href: "imoveis.html",
-    cover: "assets/marilopes/imoveis.jpg",
-    cta: "Pedir orçamento imóveis",
-    photos: [
-      ["assets/marilopes/imoveis.jpg", "Fotografia de imóvel"],
-      ["assets/marilopes/casal.jpg", "Detalhe de ambiente externo"],
-      ["assets/marilopes/familia.jpg", "Ambiente natural fotografado"],
-    ],
-  },
-  {
-    slug: "eventos",
-    title: "Eventos",
-    description: "Cobertura de aniversários, celebrações, encontros corporativos e momentos especiais.",
-    href: "eventos.html",
-    cover: "assets/marilopes/empresarial.jpg",
-    cta: "Pedir orçamento de evento",
-    photos: [
-      ["https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=900&q=85", "Mesa decorada de evento"],
-      ["https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&w=900&q=85", "Pessoas celebrando em evento"],
-      ["https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=900&q=85", "Show com luzes e plateia"],
-    ],
-  },
-];
+import {
+  contact,
+  albums,
+  DEFAULT_ACCOUNT_ROLE,
+  DEFAULT_PAGE_SETTINGS,
+  EDITOR_TABS,
+  PUBLIC_PAGES,
+} from "./js/config.js";
+import {
+  normalizePageSettings,
+  normalizePhotos,
+  normalizeStoredServices,
+  serviceListForDisplay,
+  normalizeBudget,
+  defaultPhotographerProfile,
+  normalizePhotographerProfile,
+  visibleProfilePhotos,
+} from "./js/profile.js";
+import {
+  currentSlug,
+  cleanText,
+  emailForAuth,
+  splitList,
+  escapeHtml,
+  makeId,
+} from "./js/utils.js";
 
 const appState = {
   auth: null,
@@ -115,195 +38,7 @@ const appState = {
   accountTab: "inicio",
 };
 
-const DEFAULT_ACCOUNT_ROLE = "fotografo";
-const DEFAULT_PAGE_SETTINGS = {
-  template: "classico",
-  primaryColor: "#68745f",
-  showHero: true,
-  showPortfolio: true,
-  showServices: true,
-  showBudget: true,
-  showContact: true,
-  sectionOrder: ["inicio", "portfolio", "projetos", "orcamento", "contato"],
-};
-const EDITOR_TABS = [
-  ["inicio", "Inicio"],
-  ["portfolio", "Portfolio"],
-  ["servicos", "Servicos"],
-  ["orcamento", "Orcamento"],
-  ["contato", "Contato"],
-  ["aparencia", "Aparencia"],
-  ["publicacao", "Publicacao"],
-];
-const PUBLIC_PAGES = [
-  ["inicio", "Inicio", "showHero"],
-  ["portfolio", "Portfolio", "showPortfolio"],
-  ["projetos", "Projetos", "showServices"],
-  ["orcamento", "Orcamento", "showBudget"],
-  ["contato", "Contato", "showContact"],
-];
 const albumBySlug = new Map(albums.map((album) => [album.slug, album]));
-const currentSlug = () => location.pathname.split("/").pop().replace(".html", "") || "index";
-const cleanText = (value, fallback = "") => String(value || fallback).trim();
-const normalizeEmail = (value) => {
-  let email = cleanText(value)
-    .normalize("NFKC")
-    .replace(/[\s\u200B-\u200D\uFEFF]/g, "")
-    .toLowerCase();
-  if (email.startsWith("mailto:")) email = email.slice(7);
-  if (email && !email.includes("@")) email = `${email}@gmail.com`;
-  if (email.endsWith("@gmail")) email = `${email}.com`;
-  return email;
-};
-const emailForAuth = (value) => {
-  const email = normalizeEmail(value);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw { code: "local/invalid-email" };
-  }
-  return email;
-};
-const splitList = (value) => cleanText(value).split(",").map((item) => item.trim()).filter(Boolean);
-const escapeHtml = (value) =>
-  String(value || "").replace(/[&<>"']/g, (char) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  })[char]);
-
-const normalizeHexColor = (value, fallback = DEFAULT_PAGE_SETTINGS.primaryColor) => {
-  const color = cleanText(value, fallback);
-  return /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
-};
-
-const makeId = (prefix) => {
-  const random = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  return `${prefix}-${random}`;
-};
-
-const normalizePageSettings = (page = {}) => {
-  const current = page || {};
-  const sectionOrder = Array.isArray(current.sectionOrder) && current.sectionOrder.length
-    ? current.sectionOrder.filter((section) => PUBLIC_PAGES.some(([id]) => id === section))
-    : DEFAULT_PAGE_SETTINGS.sectionOrder;
-
-  return {
-    ...DEFAULT_PAGE_SETTINGS,
-    ...current,
-    template: ["classico", "editorial", "minimal"].includes(current.template) ? current.template : DEFAULT_PAGE_SETTINGS.template,
-    primaryColor: normalizeHexColor(current.primaryColor),
-    showHero: current.showHero !== false,
-    showPortfolio: current.showPortfolio !== false,
-    showServices: current.showServices !== false,
-    showBudget: current.showBudget !== false,
-    showContact: current.showContact !== false,
-    sectionOrder,
-  };
-};
-
-const normalizePhotos = (photos = []) => (Array.isArray(photos) ? photos : [])
-  .map((photo, index) => {
-    const url = typeof photo === "string" ? photo : photo?.url;
-    const title = typeof photo === "string" ? "Foto" : photo?.title;
-
-    return {
-      ...(typeof photo === "object" && photo ? photo : {}),
-      id: cleanText(photo?.id, `photo-${index}`),
-      url: cleanText(url),
-      title: cleanText(title, "Foto"),
-      order: Number.isFinite(Number(photo?.order)) ? Number(photo.order) : index,
-      visible: photo?.visible !== false,
-      featured: Boolean(photo?.featured),
-      createdAt: photo?.createdAt || Date.now(),
-    };
-  })
-  .filter((photo) => photo.url)
-  .sort((first, second) => first.order - second.order);
-
-const normalizeStoredServices = (services = []) => (Array.isArray(services) ? services : [])
-  .map((service, index) => {
-    const rawTitle = typeof service === "string" ? service : service?.title;
-
-    return {
-      ...(typeof service === "object" && service ? service : {}),
-      id: cleanText(service?.id, `service-${index}`),
-      title: cleanText(rawTitle),
-      description: cleanText(service?.description),
-      imageUrl: cleanText(service?.imageUrl),
-      order: Number.isFinite(Number(service?.order)) ? Number(service.order) : index,
-      visible: service?.visible !== false,
-    };
-  })
-  .filter((service) => service.title)
-  .sort((first, second) => first.order - second.order);
-
-const serviceListForDisplay = (photographer = {}) => {
-  const services = normalizeStoredServices(photographer.services);
-  if (services.length) return services;
-
-  const categories = Array.isArray(photographer.categories) ? photographer.categories.filter(Boolean) : [];
-  return categories.map((category, index) => ({
-    id: `category-${index}`,
-    title: category,
-    description: "Projeto fotografico com direcao, cuidado visual e entrega em pagina de portfolio.",
-    imageUrl: "",
-    order: index,
-    visible: true,
-  }));
-};
-
-const normalizeBudget = (photographer = {}) => {
-  const budget = photographer.budget || {};
-  return {
-    title: cleanText(budget.title, "Solicite uma proposta"),
-    text: cleanText(budget.text, "Envie uma mensagem direta com as informacoes principais do projeto."),
-    whatsapp: cleanText(budget.whatsapp, photographer.whatsapp || ""),
-    defaultMessage: cleanText(budget.defaultMessage, "Ola! Gostaria de solicitar um orcamento fotografico."),
-  };
-};
-
-const defaultPhotographerProfile = (displayName = "") => ({
-  displayName,
-  city: "",
-  bio: "",
-  headline: "",
-  whatsapp: "",
-  instagram: "",
-  publicEmail: "",
-  coverUrl: "",
-  availability: "",
-  categories: [],
-  photos: [],
-  services: [],
-  page: { ...DEFAULT_PAGE_SETTINGS },
-  budget: normalizeBudget({}),
-  published: false,
-});
-
-const normalizePhotographerProfile = (profile = {}, fallbackName = "") => {
-  const current = profile || {};
-  return {
-    ...current,
-    displayName: cleanText(current.displayName, fallbackName),
-    city: cleanText(current.city),
-    bio: cleanText(current.bio),
-    headline: cleanText(current.headline),
-    whatsapp: cleanText(current.whatsapp),
-    instagram: cleanText(current.instagram),
-    publicEmail: cleanText(current.publicEmail),
-    coverUrl: cleanText(current.coverUrl),
-    availability: cleanText(current.availability),
-    categories: Array.isArray(current.categories) ? current.categories.map((item) => cleanText(item)).filter(Boolean) : [],
-    photos: normalizePhotos(current.photos),
-    services: normalizeStoredServices(current.services),
-    page: normalizePageSettings(current.page),
-    budget: normalizeBudget(current),
-    published: Boolean(current.published),
-  };
-};
-
-const visibleProfilePhotos = (photographer = {}) => normalizePhotos(photographer.photos).filter((photo) => photo.visible !== false);
 
 const authErrorMessage = (error) => {
   const messages = {
