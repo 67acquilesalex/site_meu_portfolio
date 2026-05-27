@@ -17,11 +17,11 @@ Site estatico pronto para publicar na Vercel, agora separado por paginas.
 
 ## Como editar
 
-- Troque o nome `Seu Nome Fotografia` pelo nome real do fotografo ou estudio.
-- Substitua as URLs de imagens do Unsplash nos arquivos `.html` pelas fotos reais do portfolio.
-- Atualize o WhatsApp em `https://wa.me/5592999999999` nos arquivos `index.html`, `orcamento.html` e `contato.html`, se aparecer.
-- Atualize tambem o numero `5592999999999` no arquivo `script.js`; ele e usado pelo formulario de orcamento.
-- Atualize o e-mail `contato@seudominio.com`.
+- Troque `Mari Lopes Fotografia` pelo nome real do fotografo ou estudio.
+- Edite header, footer, WhatsApp, email e albuns no arquivo `script.js`.
+- Substitua as fotos de `assets/marilopes` pelas fotos reais do portfolio.
+- Atualize tambem os links diretos de WhatsApp em `contato.html` e `reservas.html`, se aparecerem.
+- Atualize o e-mail `marilopesfotografia@gmail.com`.
 - Ajuste os textos de sobre, projetos, portfolio e contato.
 
 ## Publicar na Vercel

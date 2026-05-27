@@ -1,144 +1,120 @@
 import { firebaseConfig } from "./firebase-config.js";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import {
-  createUserWithEmailAndPassword,
-  getAuth,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut,
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import {
-  doc,
-  getDoc,
-  getFirestore,
-  onSnapshot,
-  serverTimestamp,
-  setDoc,
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-document.querySelectorAll(".menu-group > button").forEach((button) => {
-  button.addEventListener("click", () => {
-    const group = button.closest(".menu-group");
-    const expanded = group?.classList.toggle("open");
-    button.setAttribute("aria-expanded", expanded ? "true" : "false");
-  });
-});
+const contact = {
+  brand: "Mari Lopes Fotografia",
+  logo: "assets/marilopes/mari-lopes-logo.png",
+  email: "marilopesfotografia@gmail.com",
+  location: "Florianópolis - SC",
+  whatsapp: "5592999999999",
+};
 
-const defaultAlbums = [
+const albums = [
   {
     slug: "gestante",
     title: "Ensaio de gestante",
+    description: "Ensaios delicados para registrar a espera com beleza, calma e direção cuidadosa.",
     href: "gestante.html",
     cover: "assets/marilopes/gestante.jpg",
-    hidden: false,
+    cta: "Pedir orçamento gestante",
     photos: [
-      { src: "assets/marilopes/gestante.jpg", alt: "Ensaio de gestante", hidden: false },
-      { src: "assets/marilopes/feminino.jpg", alt: "Retrato feminino", hidden: false },
-      { src: "assets/marilopes/casal.jpg", alt: "Ensaio externo", hidden: false },
+      ["assets/marilopes/gestante.jpg", "Ensaio de gestante"],
+      ["assets/marilopes/feminino.jpg", "Retrato feminino"],
+      ["assets/marilopes/casal.jpg", "Ensaio externo"],
     ],
   },
   {
-    slug: "imoveis",
-    title: "Fotografia de imoveis",
-    href: "imoveis.html",
-    cover: "assets/marilopes/imoveis.jpg",
-    hidden: false,
+    slug: "familia",
+    title: "Ensaio de família",
+    description: "Registros naturais para guardar afeto, rotina e os detalhes de cada fase.",
+    href: "familia.html",
+    cover: "assets/marilopes/familia.jpg",
+    cta: "Pedir orçamento de família",
     photos: [
-      { src: "assets/marilopes/imoveis.jpg", alt: "Fotografia de imoveis", hidden: false },
-      { src: "assets/marilopes/familia.jpg", alt: "Ambiente natural", hidden: false },
-      { src: "assets/marilopes/casal.jpg", alt: "Detalhe externo", hidden: false },
-    ],
-  },
-  {
-    slug: "feminino",
-    title: "Ensaio feminino",
-    href: "feminino.html",
-    cover: "assets/marilopes/feminino.jpg",
-    hidden: false,
-    photos: [
-      { src: "assets/marilopes/feminino.jpg", alt: "Ensaio feminino", hidden: false },
-      { src: "assets/marilopes/empresarial.jpg", alt: "Retrato profissional", hidden: false },
-      { src: "assets/marilopes/gestante.jpg", alt: "Retrato em praia", hidden: false },
+      ["assets/marilopes/familia.jpg", "Ensaio de família"],
+      ["assets/marilopes/casal.jpg", "Família em ambiente natural"],
+      ["assets/marilopes/gestante.jpg", "Retrato familiar"],
     ],
   },
   {
     slug: "casal",
     title: "Ensaio de casal",
+    description: "Ensaios para registrar conexão, presença e histórias compartilhadas com direção leve.",
     href: "casal.html",
     cover: "assets/marilopes/casal.jpg",
-    hidden: false,
+    cta: "Pedir orçamento casal",
     photos: [
-      { src: "assets/marilopes/casal.jpg", alt: "Ensaio de casal", hidden: false },
-      { src: "assets/marilopes/familia.jpg", alt: "Casal em natureza", hidden: false },
-      { src: "assets/marilopes/feminino.jpg", alt: "Retrato externo", hidden: false },
+      ["assets/marilopes/casal.jpg", "Ensaio de casal"],
+      ["assets/marilopes/familia.jpg", "Casal em ambiente natural"],
+      ["assets/marilopes/feminino.jpg", "Retrato em ensaio externo"],
+    ],
+  },
+  {
+    slug: "feminino",
+    title: "Ensaio feminino",
+    description: "Retratos femininos com naturalidade, direção cuidadosa e estética limpa.",
+    href: "feminino.html",
+    cover: "assets/marilopes/feminino.jpg",
+    cta: "Pedir orçamento feminino",
+    photos: [
+      ["assets/marilopes/feminino.jpg", "Ensaio feminino"],
+      ["assets/marilopes/gestante.jpg", "Retrato feminino em praia"],
+      ["assets/marilopes/empresarial.jpg", "Retrato feminino profissional"],
     ],
   },
   {
     slug: "empresarial",
     title: "Ensaio empresarial",
+    description: "Fotos profissionais para marca pessoal, equipes, clínicas, escritórios e conteúdo institucional.",
     href: "empresarial.html",
     cover: "assets/marilopes/empresarial.jpg",
-    hidden: false,
+    cta: "Pedir orçamento empresarial",
     photos: [
-      { src: "assets/marilopes/empresarial.jpg", alt: "Ensaio empresarial", hidden: false },
-      { src: "assets/marilopes/feminino.jpg", alt: "Retrato profissional", hidden: false },
-      { src: "assets/marilopes/imoveis.jpg", alt: "Ambiente comercial", hidden: false },
+      ["assets/marilopes/empresarial.jpg", "Ensaio empresarial"],
+      ["assets/marilopes/feminino.jpg", "Retrato profissional"],
+      ["assets/marilopes/imoveis.jpg", "Ambiente comercial"],
     ],
   },
   {
-    slug: "familia",
-    title: "Ensaio de familia",
-    href: "familia.html",
-    cover: "assets/marilopes/familia.jpg",
-    hidden: false,
+    slug: "imoveis",
+    title: "Fotografia de imóveis",
+    description: "Fotografia de interiores e espaços com composição limpa, luz natural e atenção aos detalhes.",
+    href: "imoveis.html",
+    cover: "assets/marilopes/imoveis.jpg",
+    cta: "Pedir orçamento imóveis",
     photos: [
-      { src: "assets/marilopes/familia.jpg", alt: "Ensaio de familia", hidden: false },
-      { src: "assets/marilopes/casal.jpg", alt: "Familia em ambiente natural", hidden: false },
-      { src: "assets/marilopes/gestante.jpg", alt: "Retrato familiar", hidden: false },
+      ["assets/marilopes/imoveis.jpg", "Fotografia de imóvel"],
+      ["assets/marilopes/casal.jpg", "Detalhe de ambiente externo"],
+      ["assets/marilopes/familia.jpg", "Ambiente natural fotografado"],
+    ],
+  },
+  {
+    slug: "eventos",
+    title: "Eventos",
+    description: "Cobertura de aniversários, celebrações, encontros corporativos e momentos especiais.",
+    href: "eventos.html",
+    cover: "assets/marilopes/empresarial.jpg",
+    cta: "Pedir orçamento de evento",
+    photos: [
+      ["https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=900&q=85", "Mesa decorada de evento"],
+      ["https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&w=900&q=85", "Pessoas celebrando em evento"],
+      ["https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=900&q=85", "Show com luzes e plateia"],
     ],
   },
 ];
 
 const appState = {
-  firebaseReady: false,
   auth: null,
   db: null,
-  user: null,
-  profile: null,
+  firebaseReady: false,
+  firebaseError: "",
+  modules: {},
   photographers: [],
+  profile: null,
+  user: null,
 };
 
-const hasFirebaseConfig = Object.values(firebaseConfig).every((value) => value && !String(value).includes("COLE_AQUI"));
-
-if (hasFirebaseConfig) {
-  const app = initializeApp(firebaseConfig);
-  appState.firebaseReady = true;
-  appState.auth = getAuth(app);
-  appState.db = getFirestore(app);
-}
-
-const budgetForm = document.querySelector("[data-budget-form]");
-const whatsappNumber = "5592999999999";
-
-if (budgetForm) {
-  budgetForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const formData = new FormData(budgetForm);
-    const message = [
-      "Ola! Gostaria de solicitar um orcamento.",
-      "",
-      `Nome: ${formData.get("nome") || ""}`,
-      `Telefone: ${formData.get("telefone") || ""}`,
-      `Email: ${formData.get("email") || ""}`,
-      `Data da sessao: ${formData.get("data") || "A definir"}`,
-      `Segmento: ${formData.get("segmento") || ""}`,
-      `Mensagem: ${formData.get("mensagem") || ""}`,
-    ].join("\n");
-
-    window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
-  });
-}
-
+const albumBySlug = new Map(albums.map((album) => [album.slug, album]));
+const currentSlug = () => location.pathname.split("/").pop().replace(".html", "") || "index";
 const cleanText = (value, fallback = "") => String(value || fallback).trim();
 const splitList = (value) => cleanText(value).split(",").map((item) => item.trim()).filter(Boolean);
 const escapeHtml = (value) =>
@@ -149,52 +125,150 @@ const escapeHtml = (value) =>
     '"': "&quot;",
     "'": "&#39;",
   })[char]);
+
 const authErrorMessage = (error) => {
-  const code = error?.code || "";
   const messages = {
-    "auth/email-already-in-use": "Este email ja esta cadastrado.",
-    "auth/invalid-email": "Email invalido.",
+    "auth/email-already-in-use": "Este email já está cadastrado.",
+    "auth/invalid-email": "Email inválido.",
     "auth/weak-password": "A senha precisa ter pelo menos 6 caracteres.",
-    "auth/operation-not-allowed": "Email/senha ainda nao esta ativado no Firebase Authentication.",
-    "auth/unauthorized-domain": "Este dominio nao esta autorizado no Firebase Authentication.",
+    "auth/operation-not-allowed": "Email/senha ainda não está ativado no Firebase Authentication.",
+    "auth/unauthorized-domain": "Este domínio não está autorizado no Firebase Authentication.",
     "permission-denied": "O Firestore negou a escrita. Verifique as regras.",
   };
-  return messages[code] || error?.message || "Nao foi possivel concluir a operacao.";
+  return messages[error?.code] || error?.message || "Não foi possível concluir a operação.";
 };
-const userDoc = (uid) => doc(appState.db, "users", uid);
-const photographerDoc = (uid) => doc(appState.db, "photographers", uid);
 
-const currentSlug = () => location.pathname.replace(/^\/|\.html$/g, "") || "index";
+const hasFirebaseConfig = Object.values(firebaseConfig || {}).every((value) => value && !String(value).includes("COLE_AQUI"));
+
+const navItem = (href, label, slugs) => {
+  const active = slugs.includes(currentSlug()) ? ' class="active"' : "";
+  return `<a${active} href="${href}">${label}</a>`;
+};
+
+const renderLayout = () => {
+  document.querySelectorAll("[data-site-header], .site-header").forEach((header) => {
+    const isServicePage = albumBySlug.has(currentSlug());
+    header.className = "site-header";
+    header.dataset.siteHeader = "";
+    header.innerHTML = `
+      <div class="site-frame header-frame">
+        <a class="brand" href="index.html" aria-label="${contact.brand}">
+          <img src="${contact.logo}" alt="${contact.brand}" width="239" height="82" />
+        </a>
+        <button class="nav-toggle" type="button" aria-label="Abrir menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+        <nav class="main-nav" aria-label="Site">
+          ${navItem("index.html", "Home", ["index"])}
+          ${navItem("portfolio.html", "Portfólio", ["portfolio"])}
+          <div class="menu-group${isServicePage ? " active" : ""}">
+            <button type="button" aria-expanded="false">Serviços</button>
+            <div class="submenu" aria-label="Serviços">
+              ${albums.map((album) => `<a href="${album.href}">${album.title}</a>`).join("")}
+            </div>
+          </div>
+          ${navItem("projetos.html", "Projetos", ["projetos"])}
+          ${navItem("orcamento.html", "Orçamento", ["orcamento"])}
+          ${navItem("contato.html", "Contato", ["contato"])}
+        </nav>
+      </div>
+    `;
+  });
+
+  document.querySelectorAll("[data-site-footer], .site-footer").forEach((footer) => {
+    footer.className = "site-footer";
+    footer.dataset.siteFooter = "";
+    footer.innerHTML = `
+      <div class="site-frame footer-frame">
+        <p>${contact.brand}</p>
+        <p>${contact.location} | ${contact.email}</p>
+      </div>
+    `;
+  });
+};
+
+const initializeMenus = () => {
+  document.querySelectorAll(".nav-toggle").forEach((button) => {
+    button.addEventListener("click", () => {
+      const header = button.closest(".site-header");
+      const expanded = header?.classList.toggle("nav-open") || false;
+      button.setAttribute("aria-expanded", expanded ? "true" : "false");
+    });
+  });
+
+  document.querySelectorAll(".menu-group > button").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const group = button.closest(".menu-group");
+      const expanded = group?.classList.toggle("open") || false;
+      button.setAttribute("aria-expanded", expanded ? "true" : "false");
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    document.querySelectorAll(".menu-group.open").forEach((group) => {
+      if (!group.contains(event.target)) {
+        group.classList.remove("open");
+        group.querySelector("button")?.setAttribute("aria-expanded", "false");
+      }
+    });
+  });
+};
 
 const albumCard = (album, index) => {
   const item = document.createElement("a");
-  item.className = `gallery-item ${index % 2 ? "wide" : "tall"}`;
-  item.href = album.href || "#";
+  item.className = `gallery-item ${index % 3 === 1 ? "wide" : "tall"}`;
+  item.href = album.href;
   item.innerHTML = `
-    <img src="${album.cover}" alt="${album.title}" />
-    <span>${album.title}</span>
+    <img src="${escapeHtml(album.cover)}" alt="${escapeHtml(album.title)}" loading="lazy" />
+    <span>${escapeHtml(album.title)}</span>
   `;
   return item;
 };
 
-const photoNode = (photo) => {
+const photoNode = ([src, alt]) => {
   const item = document.createElement("figure");
   item.className = "photo-item";
-  item.innerHTML = `<img src="${photo.src}" alt="${photo.alt || "Foto"}" />`;
+  item.innerHTML = `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy" />`;
+  return item;
+};
+
+const emptyState = (message) => {
+  const item = document.createElement("article");
+  item.className = "platform-empty";
+  item.innerHTML = `<p>${escapeHtml(message)}</p>`;
   return item;
 };
 
 const renderDefaultPortfolio = () => {
-  document.querySelectorAll(".portfolio-gallery").forEach((gallery) => {
+  document.querySelectorAll("[data-album-grid]").forEach((gallery) => {
     gallery.classList.remove("photographer-directory", "photographer-detail-grid");
-    gallery.replaceChildren(...defaultAlbums.filter((album) => !album.hidden).map(albumCard));
+    gallery.replaceChildren(...albums.map(albumCard));
+  });
+};
+
+const renderCategoryPages = () => {
+  document.querySelectorAll("[data-category-page]").forEach((page) => {
+    const album = albumBySlug.get(page.dataset.categoryPage || currentSlug());
+    if (!album) return;
+
+    page.innerHTML = `
+      <section class="category-hero section-wrap">
+        <a href="portfolio.html">Voltar ao portfólio</a>
+        <h1>${escapeHtml(album.title)}</h1>
+        <p>${escapeHtml(album.description)}</p>
+      </section>
+      <section class="masonry section-wrap category-gallery" aria-label="Fotos de ${escapeHtml(album.title)}"></section>
+      <section class="gallery-cta section-wrap">
+        <a class="text-button" href="orcamento.html">${escapeHtml(album.cta)}</a>
+      </section>
+    `;
   });
 
-  const album = defaultAlbums.find((item) => item.slug === currentSlug());
-  const categoryGallery = document.querySelector(".masonry.category-gallery");
-  if (album && categoryGallery) {
-    categoryGallery.replaceChildren(...album.photos.filter((photo) => !photo.hidden).map(photoNode));
-  }
+  document.querySelectorAll(".category-gallery").forEach((gallery) => {
+    const album = albumBySlug.get(currentSlug());
+    if (album) gallery.replaceChildren(...album.photos.map(photoNode));
+  });
 };
 
 const renderPhotographerCards = () => {
@@ -203,7 +277,7 @@ const renderPhotographerCards = () => {
     return;
   }
 
-  const gallery = document.querySelector(".portfolio-gallery");
+  const gallery = document.querySelector("[data-album-grid]");
   if (!gallery) return;
 
   const params = new URLSearchParams(location.search);
@@ -211,8 +285,7 @@ const renderPhotographerCards = () => {
   const publicPhotographers = appState.photographers.filter((item) => item.published);
 
   if (selectedId) {
-    const photographer = publicPhotographers.find((item) => item.uid === selectedId);
-    renderPhotographerDetail(gallery, photographer);
+    renderPhotographerDetail(gallery, publicPhotographers.find((item) => item.uid === selectedId));
     return;
   }
 
@@ -228,11 +301,11 @@ const renderPhotographerCards = () => {
     card.className = "photographer-card";
     card.href = `portfolio.html?fotografo=${encodeURIComponent(photographer.uid)}`;
     card.innerHTML = `
-      <img src="${escapeHtml(photographer.coverUrl || photographer.photos?.[0]?.url || "assets/marilopes/empresarial.jpg")}" alt="${escapeHtml(photographer.displayName || "Fotografo")}" />
+      <img src="${escapeHtml(photographer.coverUrl || photographer.photos?.[0]?.url || "assets/marilopes/empresarial.jpg")}" alt="${escapeHtml(photographer.displayName || "Fotógrafo")}" loading="lazy" />
       <div>
-        <strong>${escapeHtml(photographer.displayName || "Fotografo")}</strong>
-        <span>${escapeHtml(photographer.city || "Portfolio online")}</span>
-        <p>${escapeHtml(photographer.bio || "Conheca o trabalho deste fotografo.")}</p>
+        <strong>${escapeHtml(photographer.displayName || "Fotógrafo")}</strong>
+        <span>${escapeHtml(photographer.city || "Portfólio online")}</span>
+        <p>${escapeHtml(photographer.bio || "Conheça o trabalho deste fotógrafo.")}</p>
       </div>
     `;
     return card;
@@ -244,13 +317,7 @@ const renderPhotographerDetail = (gallery, photographer) => {
   gallery.classList.remove("photographer-directory");
 
   if (!photographer) {
-    gallery.innerHTML = `
-      <article class="platform-empty">
-        <h2>Portfolio nao encontrado</h2>
-        <p>Esse fotografo ainda nao publicou o perfil ou o link esta incorreto.</p>
-        <a class="text-button" href="portfolio.html">Ver fotografos</a>
-      </article>
-    `;
+    gallery.replaceChildren(emptyState("Esse fotógrafo ainda não publicou o perfil ou o link está incorreto."));
     return;
   }
 
@@ -258,8 +325,8 @@ const renderPhotographerDetail = (gallery, photographer) => {
   const header = document.createElement("article");
   header.className = "photographer-profile-head";
   header.innerHTML = `
-    <a href="portfolio.html">Voltar aos fotografos</a>
-    <h2>${escapeHtml(photographer.displayName || "Fotografo")}</h2>
+    <a href="portfolio.html">Voltar aos fotógrafos</a>
+    <h2>${escapeHtml(photographer.displayName || "Fotógrafo")}</h2>
     <p>${escapeHtml(photographer.bio || "")}</p>
     <div class="profile-links">
       ${photographer.city ? `<span>${escapeHtml(photographer.city)}</span>` : ""}
@@ -272,21 +339,64 @@ const renderPhotographerDetail = (gallery, photographer) => {
     const figure = document.createElement("figure");
     figure.className = "photographer-photo";
     figure.innerHTML = `
-      <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.title || photographer.displayName || "Foto")}" />
+      <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.title || photographer.displayName || "Foto")}" loading="lazy" />
       ${photo.title ? `<figcaption>${escapeHtml(photo.title)}</figcaption>` : ""}
     `;
     return figure;
   });
 
-  gallery.replaceChildren(header, ...(nodes.length ? nodes : [emptyState("Este fotografo ainda nao publicou fotos.")]));
+  gallery.replaceChildren(header, ...(nodes.length ? nodes : [emptyState("Este fotógrafo ainda não publicou fotos.")]));
 };
 
-const emptyState = (message) => {
-  const item = document.createElement("article");
-  item.className = "platform-empty";
-  item.innerHTML = `<p>${message}</p>`;
-  return item;
+const initializeBudgetForm = () => {
+  const budgetForm = document.querySelector("[data-budget-form]");
+  if (!budgetForm) return;
+
+  budgetForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const formData = new FormData(budgetForm);
+    const message = [
+      "Olá! Gostaria de solicitar um orçamento.",
+      "",
+      `Nome: ${formData.get("nome") || ""}`,
+      `Telefone: ${formData.get("telefone") || ""}`,
+      `Email: ${formData.get("email") || ""}`,
+      `Data da sessão: ${formData.get("data") || "A definir"}`,
+      `Segmento: ${formData.get("segmento") || ""}`,
+      `Mensagem: ${formData.get("mensagem") || ""}`,
+    ].join("\n");
+
+    window.open(`https://wa.me/${contact.whatsapp}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+  });
 };
+
+const connectFirebase = async () => {
+  if (!hasFirebaseConfig) return false;
+
+  try {
+    const [appModule, authModule, firestoreModule] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js"),
+    ]);
+
+    const app = appModule.initializeApp(firebaseConfig);
+    appState.auth = authModule.getAuth(app);
+    appState.db = firestoreModule.getFirestore(app);
+    appState.modules = { auth: authModule, firestore: firestoreModule };
+    appState.firebaseReady = true;
+  } catch (error) {
+    appState.firebaseError = authErrorMessage(error);
+    console.warn("Firebase indisponível:", error);
+  }
+
+  return appState.firebaseReady;
+};
+
+const userDoc = (uid) => appState.modules.firestore.doc(appState.db, "users", uid);
+const photographerDoc = (uid) => appState.modules.firestore.doc(appState.db, "photographers", uid);
+const directoryDoc = () => appState.modules.firestore.doc(appState.db, "platform", "directory");
+const timestamp = () => appState.modules.firestore.serverTimestamp();
 
 const watchPhotographers = () => {
   if (!appState.firebaseReady) {
@@ -294,16 +404,15 @@ const watchPhotographers = () => {
     return;
   }
 
-  onSnapshot(doc(appState.db, "platform", "directory"), (snapshot) => {
+  appState.modules.firestore.onSnapshot(directoryDoc(), (snapshot) => {
     const data = snapshot.data();
     appState.photographers = Array.isArray(data?.photographers) ? data.photographers : [];
     renderPhotographerCards();
-  });
+  }, () => renderDefaultPortfolio());
 };
 
 const saveDirectoryProfile = async (uid, profile) => {
-  const directoryRef = doc(appState.db, "platform", "directory");
-  const snapshot = await getDoc(directoryRef);
+  const snapshot = await appState.modules.firestore.getDoc(directoryDoc());
   const current = Array.isArray(snapshot.data()?.photographers) ? snapshot.data().photographers : [];
   const publicProfile = {
     uid,
@@ -316,18 +425,22 @@ const saveDirectoryProfile = async (uid, profile) => {
     photos: Array.isArray(profile.photos) ? profile.photos : [],
     published: Boolean(profile.published),
   };
-  const next = [publicProfile, ...current.filter((item) => item.uid !== uid)];
-  await setDoc(directoryRef, { photographers: next, updatedAt: serverTimestamp() }, { merge: true });
+
+  await appState.modules.firestore.setDoc(
+    directoryDoc(),
+    { photographers: [publicProfile, ...current.filter((item) => item.uid !== uid)], updatedAt: timestamp() },
+    { merge: true },
+  );
 };
 
 const readOwnProfile = async (user) => {
-  const snapshot = await getDoc(userDoc(user.uid));
+  const snapshot = await appState.modules.firestore.getDoc(userDoc(user.uid));
   appState.profile = snapshot.exists()
     ? snapshot.data()
     : { uid: user.uid, email: user.email, name: user.email, role: "cliente" };
 
   if (appState.profile.role === "fotografo") {
-    const photographerSnapshot = await getDoc(photographerDoc(user.uid));
+    const photographerSnapshot = await appState.modules.firestore.getDoc(photographerDoc(user.uid));
     appState.profile.photographer = photographerSnapshot.exists()
       ? photographerSnapshot.data()
       : {
@@ -337,6 +450,7 @@ const readOwnProfile = async (user) => {
           whatsapp: "",
           instagram: "",
           coverUrl: "",
+          categories: [],
           photos: [],
           published: false,
         };
@@ -345,7 +459,9 @@ const readOwnProfile = async (user) => {
 
 const savePhotographerProfile = async (form) => {
   const formData = new FormData(form);
-  const profile = {
+  const currentPhotos = appState.profile?.photographer?.photos || [];
+  const nextProfile = {
+    ...appState.profile.photographer,
     displayName: cleanText(formData.get("displayName")),
     city: cleanText(formData.get("city")),
     bio: cleanText(formData.get("bio")),
@@ -354,12 +470,11 @@ const savePhotographerProfile = async (form) => {
     coverUrl: cleanText(formData.get("coverUrl")),
     categories: splitList(formData.get("categories")),
     published: formData.get("published") === "on",
-    updatedAt: serverTimestamp(),
+    photos: currentPhotos,
+    updatedAt: timestamp(),
   };
 
-  const currentPhotos = appState.profile?.photographer?.photos || [];
-  const nextProfile = { ...appState.profile.photographer, ...profile, photos: currentPhotos };
-  await setDoc(photographerDoc(appState.user.uid), nextProfile, { merge: true });
+  await appState.modules.firestore.setDoc(photographerDoc(appState.user.uid), nextProfile, { merge: true });
   await saveDirectoryProfile(appState.user.uid, nextProfile);
   appState.profile.photographer = nextProfile;
 };
@@ -375,9 +490,10 @@ const addPhoto = async (form) => {
     ...current,
     coverUrl: current.coverUrl || url,
     photos: [...photos, { url, title: cleanText(formData.get("photoTitle"), "Foto"), createdAt: Date.now() }],
-    updatedAt: serverTimestamp(),
+    updatedAt: timestamp(),
   };
-  await setDoc(photographerDoc(appState.user.uid), nextProfile, { merge: true });
+
+  await appState.modules.firestore.setDoc(photographerDoc(appState.user.uid), nextProfile, { merge: true });
   await saveDirectoryProfile(appState.user.uid, nextProfile);
   appState.profile.photographer = nextProfile;
   form.reset();
@@ -386,31 +502,29 @@ const addPhoto = async (form) => {
 const removePhoto = async (index) => {
   const current = appState.profile?.photographer || {};
   const photos = Array.isArray(current.photos) ? [...current.photos] : [];
-  photos.splice(index, 1);
-  const nextProfile = { ...current, photos, coverUrl: current.coverUrl || photos[0]?.url || "", updatedAt: serverTimestamp() };
-  await setDoc(photographerDoc(appState.user.uid), nextProfile, { merge: true });
+  const removed = photos.splice(index, 1)[0];
+  const coverWasRemoved = removed?.url && current.coverUrl === removed.url;
+  const nextProfile = {
+    ...current,
+    photos,
+    coverUrl: coverWasRemoved ? photos[0]?.url || "" : current.coverUrl || photos[0]?.url || "",
+    updatedAt: timestamp(),
+  };
+
+  await appState.modules.firestore.setDoc(photographerDoc(appState.user.uid), nextProfile, { merge: true });
   await saveDirectoryProfile(appState.user.uid, nextProfile);
   appState.profile.photographer = nextProfile;
 };
 
 const buildAccountShell = () => {
-  let shell = document.querySelector("[data-admin-static]");
-  const siteFooter = document.querySelector(".site-footer");
-
+  let shell = document.querySelector("[data-account-shell]");
   if (!shell) {
     shell = document.createElement("section");
     shell.className = "admin-access";
-    shell.dataset.adminStatic = "";
+    shell.dataset.accountShell = "";
     shell.setAttribute("aria-label", "Conta");
-    shell.innerHTML = `
-      <details open>
-        <summary>Entrar</summary>
-        <div data-account-root></div>
-      </details>
-    `;
+    shell.innerHTML = `<div class="account-modal" data-account-root></div>`;
     document.body.append(shell);
-  } else {
-    shell.querySelector("details").innerHTML = `<summary>Entrar</summary><div data-account-root></div>`;
   }
 
   let launcher = document.querySelector("[data-admin-launcher]");
@@ -423,16 +537,19 @@ const buildAccountShell = () => {
   }
 
   launcher.textContent = "Conta";
+  launcher.hidden = false;
   launcher.setAttribute("aria-label", "Abrir conta");
-  launcher.addEventListener("click", (event) => {
-    event.preventDefault();
+  launcher.addEventListener("click", () => {
     shell.classList.add("is-open");
-    shell.querySelector("details").open = true;
     shell.querySelector("input, button, textarea")?.focus();
   });
 
   shell.addEventListener("click", (event) => {
     if (event.target === shell) shell.classList.remove("is-open");
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") shell.classList.remove("is-open");
   });
 
   return shell;
@@ -443,7 +560,7 @@ const renderAuthForms = (root, message = "") => {
     <div class="auth-intro">
       <span>Acesso do site</span>
       <h1>Entre ou crie sua conta para publicar portfólios</h1>
-      <p>Fotógrafos publicam fotos e dados do perfil. Clientes criam conta para acompanhar o site e futuras interações.</p>
+      <p>Fotógrafos publicam fotos e dados do perfil. Clientes acompanham futuras interações pelo site.</p>
     </div>
     <div class="account-grid">
       <form class="account-form" data-login-form>
@@ -459,14 +576,14 @@ const renderAuthForms = (root, message = "") => {
         <label>Senha<input name="password" type="password" autocomplete="new-password" minlength="6" required /></label>
         <label>Tipo
           <select name="role" required>
-            <option value="fotografo">Fotografo</option>
+            <option value="fotografo">Fotógrafo</option>
             <option value="cliente">Cliente</option>
           </select>
         </label>
         <button type="submit">Cadastrar</button>
       </form>
     </div>
-    <p class="admin-message" data-account-message>${message}</p>
+    <p class="admin-message" data-account-message>${escapeHtml(message)}</p>
   `;
 };
 
@@ -482,7 +599,7 @@ const renderDashboard = (root) => {
           <strong>Conta de cliente</strong>
           <span>${escapeHtml(profile.name || profile.email)}</span>
         </div>
-        <p>Seu cadastro esta salvo. A proxima etapa do projeto pode incluir favoritos, pedidos de orcamento e contato direto com fotografos.</p>
+        <p>Seu cadastro está salvo. A próxima etapa pode incluir favoritos, pedidos de orçamento e contato direto com fotógrafos.</p>
         <button type="button" data-account-logout>Sair</button>
       </div>
     `;
@@ -492,18 +609,18 @@ const renderDashboard = (root) => {
   root.innerHTML = `
     <div class="account-panel">
       <div class="admin-panel-top">
-        <strong>Area do fotografo</strong>
+        <strong>Área do fotógrafo</strong>
         <span>${escapeHtml(profile.email || "")}</span>
       </div>
       <form class="account-form" data-photographer-form>
-        <label>Nome publico<input name="displayName" value="${escapeHtml(photographer.displayName || profile.name || "")}" required /></label>
+        <label>Nome público<input name="displayName" value="${escapeHtml(photographer.displayName || profile.name || "")}" required /></label>
         <label>Cidade<input name="city" value="${escapeHtml(photographer.city || "")}" placeholder="Manaus - AM" /></label>
         <label>Bio<textarea name="bio" rows="3" placeholder="Fale sobre seu estilo e atendimento">${escapeHtml(photographer.bio || "")}</textarea></label>
         <label>WhatsApp<input name="whatsapp" value="${escapeHtml(photographer.whatsapp || "")}" placeholder="5592999999999" /></label>
         <label>Instagram<input name="instagram" value="${escapeHtml(photographer.instagram || "")}" placeholder="https://instagram.com/seuperfil" /></label>
         <label>Categorias<input name="categories" value="${escapeHtml((photographer.categories || []).join(", "))}" placeholder="Casamento, gestante, eventos" /></label>
         <label>Foto de capa por URL<input name="coverUrl" value="${escapeHtml(photographer.coverUrl || "")}" placeholder="https://..." /></label>
-        <label class="account-check"><input name="published" type="checkbox" ${photographer.published ? "checked" : ""} /> Publicar meu portfolio</label>
+        <label class="account-check"><input name="published" type="checkbox" ${photographer.published ? "checked" : ""} /> Publicar meu portfólio</label>
         <button type="submit">Salvar perfil</button>
       </form>
       <form class="account-form compact" data-photo-form>
@@ -515,11 +632,11 @@ const renderDashboard = (root) => {
       <div class="photo-manager">
         ${photos.map((photo, index) => `
           <article>
-            <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.title || "Foto")}" />
+            <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.title || "Foto")}" loading="lazy" />
             <span>${escapeHtml(photo.title || "Foto")}</span>
             <button type="button" data-remove-photo="${index}">Remover</button>
           </article>
-        `).join("") || `<p class="mock-empty">Adicione links de fotos para montar seu portfolio.</p>`}
+        `).join("") || `<p class="mock-empty">Adicione links de fotos para montar seu portfólio.</p>`}
       </div>
       <button type="button" data-account-logout>Sair</button>
       <p class="admin-message" data-account-message></p>
@@ -532,26 +649,22 @@ const initializeAccount = () => {
   const root = shell.querySelector("[data-account-root]");
 
   if (!appState.firebaseReady) {
-    renderAuthForms(root, "Configure o Firebase em firebase-config.js para ativar cadastro e login.");
+    renderAuthForms(root, appState.firebaseError || "Configure o Firebase em firebase-config.js para ativar cadastro e login.");
     return;
   }
 
-  onAuthStateChanged(appState.auth, async (user) => {
+  appState.modules.auth.onAuthStateChanged(appState.auth, async (user) => {
     appState.user = user;
-    document.body.classList.toggle("auth-gated", !user);
-    document.querySelector("[data-admin-launcher]").hidden = !user;
 
     if (!user) {
       appState.profile = null;
-      shell.classList.add("is-open");
-      shell.querySelector("details").open = true;
       renderAuthForms(root);
       return;
     }
 
     await readOwnProfile(user);
-    shell.classList.remove("is-open");
     renderDashboard(root);
+    shell.classList.remove("is-open");
   });
 
   root.addEventListener("submit", async (event) => {
@@ -561,27 +674,33 @@ const initializeAccount = () => {
     const photographerForm = event.target.closest("[data-photographer-form]");
     const photoForm = event.target.closest("[data-photo-form]");
     const message = root.querySelector("[data-account-message]");
+    if (message) message.textContent = "";
 
     try {
       if (loginForm) {
         const formData = new FormData(loginForm);
-        await signInWithEmailAndPassword(appState.auth, cleanText(formData.get("email")), String(formData.get("password") || ""));
+        await appState.modules.auth.signInWithEmailAndPassword(appState.auth, cleanText(formData.get("email")), String(formData.get("password") || ""));
         loginForm.reset();
       }
 
       if (registerForm) {
         const formData = new FormData(registerForm);
-        const credential = await createUserWithEmailAndPassword(appState.auth, cleanText(formData.get("email")), String(formData.get("password") || ""));
+        const credential = await appState.modules.auth.createUserWithEmailAndPassword(
+          appState.auth,
+          cleanText(formData.get("email")),
+          String(formData.get("password") || ""),
+        );
         const profile = {
           uid: credential.user.uid,
           name: cleanText(formData.get("name")),
           email: cleanText(formData.get("email")),
           role: cleanText(formData.get("role"), "cliente"),
-          createdAt: serverTimestamp(),
+          createdAt: timestamp(),
         };
-        await setDoc(userDoc(credential.user.uid), profile);
+        await appState.modules.firestore.setDoc(userDoc(credential.user.uid), profile);
+
         if (profile.role === "fotografo") {
-          const photographer = {
+          await appState.modules.firestore.setDoc(photographerDoc(credential.user.uid), {
             displayName: profile.name,
             city: "",
             bio: "",
@@ -591,10 +710,10 @@ const initializeAccount = () => {
             categories: [],
             photos: [],
             published: false,
-            createdAt: serverTimestamp(),
-          };
-          await setDoc(photographerDoc(credential.user.uid), photographer);
+            createdAt: timestamp(),
+          });
         }
+
         registerForm.reset();
       }
 
@@ -617,7 +736,7 @@ const initializeAccount = () => {
     const remove = event.target.closest("[data-remove-photo]");
 
     if (logout) {
-      await signOut(appState.auth);
+      await appState.modules.auth.signOut(appState.auth);
       shell.classList.remove("is-open");
     }
 
@@ -628,6 +747,11 @@ const initializeAccount = () => {
   });
 };
 
+renderLayout();
+initializeMenus();
 renderDefaultPortfolio();
+renderCategoryPages();
+initializeBudgetForm();
+await connectFirebase();
 watchPhotographers();
 initializeAccount();
