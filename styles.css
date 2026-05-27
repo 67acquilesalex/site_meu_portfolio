@@ -971,22 +971,6 @@ button {
   border: 1px solid rgba(86, 68, 54, 0.16);
 }
 
-.google-access label {
-  display: grid;
-  min-width: min(260px, 100%);
-  gap: 7px;
-  color: var(--line);
-  font-size: 13px;
-}
-
-.google-access select {
-  min-height: 38px;
-  border: 1px solid rgba(86, 68, 54, 0.24);
-  padding: 0 12px;
-  color: var(--ink);
-  background: rgba(255, 255, 255, 0.78);
-}
-
 .account-check {
   grid-template-columns: auto 1fr;
   align-items: center;

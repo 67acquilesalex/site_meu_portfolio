@@ -113,11 +113,15 @@ const appState = {
   user: null,
 };
 
+const DEFAULT_ACCOUNT_ROLE = "fotografo";
 const albumBySlug = new Map(albums.map((album) => [album.slug, album]));
 const currentSlug = () => location.pathname.split("/").pop().replace(".html", "") || "index";
 const cleanText = (value, fallback = "") => String(value || fallback).trim();
 const normalizeEmail = (value) => {
-  let email = cleanText(value).replace(/\s+/g, "").toLowerCase();
+  let email = cleanText(value)
+    .normalize("NFKC")
+    .replace(/[\s\u200B-\u200D\uFEFF]/g, "")
+    .toLowerCase();
   if (email.startsWith("mailto:")) email = email.slice(7);
   if (email && !email.includes("@")) email = `${email}@gmail.com`;
   if (email.endsWith("@gmail")) email = `${email}.com`;
@@ -143,7 +147,7 @@ const escapeHtml = (value) =>
 const authErrorMessage = (error) => {
   const messages = {
     "auth/email-already-in-use": "Este email já está cadastrado.",
-    "auth/invalid-email": "Email inválido.",
+    "auth/invalid-email": "Confira o email. Remova espacos ou caracteres extras e tente novamente.",
     "local/invalid-email": "Digite o email completo, exemplo: nome@gmail.com.",
     "auth/invalid-credential": "Email ou senha incorretos.",
     "auth/user-not-found": "Nao existe conta com este email.",
@@ -160,7 +164,6 @@ const authErrorMessage = (error) => {
     "auth/api-key-not-valid.-please-pass-a-valid-api-key.": "A chave do Firebase é inválida. Copie novamente a configuração Web App do seu projeto Firebase.",
     "auth/invalid-api-key": "A chave do Firebase é inválida. Copie novamente a configuração Web App do seu projeto Firebase.",
     "auth/operation-not-allowed": "Este tipo de login ainda nao esta ativado no Firebase Authentication.",
-    "auth/invalid-email": "Digite o email completo, exemplo: nome@gmail.com.",
     "auth/app-not-authorized": "Este dominio nao esta autorizado para usar esta chave do Firebase.",
     "permission-denied": "O Firestore negou a escrita. Publique as regras do banco de dados no Firebase.",
   };
@@ -486,11 +489,28 @@ const saveDirectoryProfile = async (uid, profile) => {
 
 const readOwnProfile = async (user) => {
   const snapshot = await appState.modules.firestore.getDoc(userDoc(user.uid));
-  appState.profile = snapshot.exists()
-    ? snapshot.data()
-    : { uid: user.uid, email: user.email, name: user.email, role: "cliente" };
+  const savedProfile = snapshot.exists() ? snapshot.data() : {};
+  appState.profile = {
+    ...savedProfile,
+    uid: user.uid,
+    name: cleanText(savedProfile.name, user.displayName || user.email || ""),
+    email: savedProfile.email || user.email || "",
+    role: DEFAULT_ACCOUNT_ROLE,
+  };
 
-  if (appState.profile.role === "fotografo") {
+  if (!snapshot.exists() || savedProfile.role !== DEFAULT_ACCOUNT_ROLE || !savedProfile.email || !savedProfile.name) {
+    const profilePatch = {
+      uid: user.uid,
+      name: appState.profile.name,
+      email: appState.profile.email,
+      role: DEFAULT_ACCOUNT_ROLE,
+    };
+
+    if (!snapshot.exists()) profilePatch.createdAt = timestamp();
+    await appState.modules.firestore.setDoc(userDoc(user.uid), profilePatch, { merge: true });
+  }
+
+  if (appState.profile.role === DEFAULT_ACCOUNT_ROLE) {
     const photographerSnapshot = await appState.modules.firestore.getDoc(photographerDoc(user.uid));
     appState.profile.photographer = photographerSnapshot.exists()
       ? photographerSnapshot.data()
@@ -508,18 +528,18 @@ const readOwnProfile = async (user) => {
   }
 };
 
-const createDefaultProfile = async (user, role = "fotografo") => {
+const createDefaultProfile = async (user) => {
   const profile = {
     uid: user.uid,
     name: cleanText(user.displayName, user.email),
     email: user.email || "",
-    role,
+    role: DEFAULT_ACCOUNT_ROLE,
     createdAt: timestamp(),
   };
 
   await appState.modules.firestore.setDoc(userDoc(user.uid), profile, { merge: true });
 
-  if (profile.role === "fotografo") {
+  if (profile.role === DEFAULT_ACCOUNT_ROLE) {
     const photographerSnapshot = await appState.modules.firestore.getDoc(photographerDoc(user.uid));
     const photographerProfile = photographerSnapshot.exists()
       ? photographerSnapshot.data()
@@ -543,10 +563,10 @@ const createDefaultProfile = async (user, role = "fotografo") => {
   appState.profile = profile;
 };
 
-const readOrCreateProfile = async (user, role = "fotografo") => {
+const readOrCreateProfile = async (user) => {
   const snapshot = await appState.modules.firestore.getDoc(userDoc(user.uid));
   if (!snapshot.exists()) {
-    await createDefaultProfile(user, role);
+    await createDefaultProfile(user);
     return;
   }
 
@@ -656,36 +676,24 @@ const renderAuthForms = (root, message = "") => {
     <div class="auth-intro">
       <span>Acesso do site</span>
       <h1>Entre ou crie sua conta para publicar portfólios</h1>
-      <p>Fotógrafos publicam fotos e dados do perfil. Clientes acompanham futuras interações pelo site.</p>
+      <p>Use sua conta para publicar fotos e dados do perfil no site.</p>
     </div>
     <div class="account-grid">
       <form class="account-form" data-login-form>
         <h3>Entrar</h3>
-        <label>Email<input name="email" type="text" inputmode="email" autocomplete="username" placeholder="nome@gmail.com" required /></label>
+        <label>Email<input name="email" type="email" inputmode="email" autocomplete="username" placeholder="nome@gmail.com" required /></label>
         <label>Senha<input name="password" type="password" autocomplete="current-password" required /></label>
         <button type="submit">Entrar</button>
       </form>
       <form class="account-form" data-register-form>
         <h3>Criar conta</h3>
         <label>Nome<input name="name" autocomplete="name" required /></label>
-        <label>Email<input name="email" type="text" inputmode="email" autocomplete="email" placeholder="nome@gmail.com" required /></label>
+        <label>Email<input name="email" type="email" inputmode="email" autocomplete="email" placeholder="nome@gmail.com" required /></label>
         <label>Senha<input name="password" type="password" autocomplete="new-password" minlength="6" required /></label>
-        <label>Tipo
-          <select name="role" required>
-            <option value="fotografo">Fotógrafo</option>
-            <option value="cliente">Cliente</option>
-          </select>
-        </label>
         <button type="submit">Cadastrar</button>
       </form>
     </div>
     <div class="google-access">
-      <label>Tipo da conta ao entrar com Google
-        <select data-google-role>
-          <option value="fotografo">Fotografo</option>
-          <option value="cliente">Cliente</option>
-        </select>
-      </label>
       <button type="button" data-google-login>Continuar com Google</button>
     </div>
     <p class="admin-message" data-account-message>${escapeHtml(message)}</p>
@@ -696,21 +704,6 @@ const renderDashboard = (root, message = "") => {
   const profile = appState.profile || {};
   const photographer = profile.photographer || {};
   const photos = Array.isArray(photographer.photos) ? photographer.photos : [];
-
-  if (profile.role !== "fotografo") {
-    root.innerHTML = `
-      <div class="account-panel">
-        <div class="admin-panel-top">
-          <strong>Conta de cliente</strong>
-          <span>${escapeHtml(profile.name || profile.email)}</span>
-        </div>
-        <p>Seu cadastro está salvo. A próxima etapa pode incluir favoritos, pedidos de orçamento e contato direto com fotógrafos.</p>
-        <p class="admin-message" data-account-message>${escapeHtml(message)}</p>
-        <button type="button" data-account-logout>Sair</button>
-      </div>
-    `;
-    return;
-  }
 
   root.innerHTML = `
     <div class="account-panel">
@@ -817,13 +810,13 @@ const initializeAccount = () => {
           uid: credential.user.uid,
           name: cleanText(formData.get("name")),
           email,
-          role: cleanText(formData.get("role"), "cliente"),
+          role: DEFAULT_ACCOUNT_ROLE,
           createdAt: timestamp(),
         };
         appState.user = credential.user;
         await appState.modules.firestore.setDoc(userDoc(credential.user.uid), profile);
 
-        if (profile.role === "fotografo") {
+        if (profile.role === DEFAULT_ACCOUNT_ROLE) {
           const photographerProfile = {
             displayName: profile.name,
             city: "",
@@ -881,9 +874,8 @@ const initializeAccount = () => {
         const provider = new appState.modules.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: "select_account" });
         const credential = await appState.modules.auth.signInWithPopup(appState.auth, provider);
-        const role = cleanText(root.querySelector("[data-google-role]")?.value, "fotografo");
         appState.user = credential.user;
-        await readOrCreateProfile(credential.user, role);
+        await readOrCreateProfile(credential.user);
         renderDashboard(root, "Login com Google realizado.");
         shell.classList.add("is-open");
       } catch (error) {
