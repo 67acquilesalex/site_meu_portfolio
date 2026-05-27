@@ -334,6 +334,7 @@ const renderPhotographerCards = () => {
   gallery.classList.remove("photographer-detail-grid");
   gallery.replaceChildren(...publicPhotographers.map((photographer) => {
     const card = document.createElement("a");
+    const categories = Array.isArray(photographer.categories) ? photographer.categories.slice(0, 3) : [];
     card.className = "photographer-card";
     card.href = `portfolio.html?fotografo=${encodeURIComponent(photographer.uid)}`;
     card.innerHTML = `
@@ -342,6 +343,7 @@ const renderPhotographerCards = () => {
         <strong>${escapeHtml(photographer.displayName || "Fotógrafo")}</strong>
         <span>${escapeHtml(photographer.city || "Portfólio online")}</span>
         <p>${escapeHtml(photographer.bio || "Conheça o trabalho deste fotógrafo.")}</p>
+        ${categories.length ? `<small>${categories.map(escapeHtml).join(" • ")}</small>` : ""}
       </div>
     `;
     return card;
@@ -358,16 +360,29 @@ const renderPhotographerDetail = (gallery, photographer) => {
   }
 
   const photos = Array.isArray(photographer.photos) ? photographer.photos : [];
+  const categories = Array.isArray(photographer.categories) ? photographer.categories.filter(Boolean) : [];
+  const coverUrl = photographer.coverUrl || photos[0]?.url || "assets/marilopes/empresarial.jpg";
+  const instagram = instagramUrl(photographer.instagram);
+  const whatsapp = whatsappUrl(photographer.whatsapp);
   const header = document.createElement("article");
-  header.className = "photographer-profile-head";
+  header.className = "photographer-profile-hero";
   header.innerHTML = `
-    <a href="portfolio.html">Voltar aos fotógrafos</a>
-    <h2>${escapeHtml(photographer.displayName || "Fotógrafo")}</h2>
-    <p>${escapeHtml(photographer.bio || "")}</p>
-    <div class="profile-links">
-      ${photographer.city ? `<span>${escapeHtml(photographer.city)}</span>` : ""}
-      ${photographer.whatsapp ? `<a href="https://wa.me/${photographer.whatsapp.replace(/\D/g, "")}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ""}
-      ${photographer.instagram ? `<a href="${escapeHtml(photographer.instagram)}" target="_blank" rel="noopener noreferrer">Instagram</a>` : ""}
+    <a class="profile-back" href="portfolio.html">Voltar aos fotógrafos</a>
+    <div class="profile-cover">
+      <img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(photographer.displayName || "Fotógrafo")}" loading="eager" />
+    </div>
+    <div class="profile-summary">
+      <span>Portfólio de fotografia</span>
+      <h2>${escapeHtml(photographer.displayName || "Fotógrafo")}</h2>
+      <p>${escapeHtml(photographer.bio || "Conheça o estilo, os ensaios e os contatos deste fotógrafo.")}</p>
+      <div class="profile-tags">
+        ${photographer.city ? `<span>${escapeHtml(photographer.city)}</span>` : ""}
+        ${categories.map((category) => `<span>${escapeHtml(category)}</span>`).join("")}
+      </div>
+      <div class="profile-links">
+        ${whatsapp ? `<a href="${escapeHtml(whatsapp)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ""}
+        ${instagram ? `<a href="${escapeHtml(instagram)}" target="_blank" rel="noopener noreferrer">Instagram</a>` : ""}
+      </div>
     </div>
   `;
 
@@ -433,6 +448,37 @@ const userDoc = (uid) => appState.modules.firestore.doc(appState.db, "users", ui
 const photographerDoc = (uid) => appState.modules.firestore.doc(appState.db, "photographers", uid);
 const directoryDoc = () => appState.modules.firestore.doc(appState.db, "platform", "directory");
 const timestamp = () => appState.modules.firestore.serverTimestamp();
+const publicProfileUrl = (uid) => {
+  const url = new URL("portfolio.html", location.href);
+  url.searchParams.set("fotografo", uid);
+  return url.href;
+};
+const instagramUrl = (value) => {
+  const instagram = cleanText(value);
+  if (!instagram) return "";
+  if (/^https?:\/\//i.test(instagram)) return instagram;
+  return `https://instagram.com/${instagram.replace(/^@/, "")}`;
+};
+const whatsappUrl = (value) => {
+  const digits = cleanText(value).replace(/\D/g, "");
+  return digits ? `https://wa.me/${digits}` : "";
+};
+const copyText = async (value) => {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.append(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  textarea.remove();
+};
 
 const setAccountMessage = (root, message) => {
   const node = root.querySelector("[data-account-message]");
@@ -475,6 +521,7 @@ const saveDirectoryProfile = async (uid, profile) => {
     bio: profile.bio || "",
     whatsapp: profile.whatsapp || "",
     instagram: profile.instagram || "",
+    categories: Array.isArray(profile.categories) ? profile.categories : [],
     coverUrl: profile.coverUrl || "",
     photos: Array.isArray(profile.photos) ? profile.photos : [],
     published: Boolean(profile.published),
@@ -705,12 +752,25 @@ const renderDashboard = (root, message = "") => {
   const profile = appState.profile || {};
   const photographer = profile.photographer || {};
   const photos = Array.isArray(photographer.photos) ? photographer.photos : [];
+  const isPublished = Boolean(photographer.published);
+  const profileUrl = publicProfileUrl(profile.uid || appState.user?.uid || "");
 
   root.innerHTML = `
     <div class="account-panel">
       <div class="admin-panel-top">
         <strong>Área do fotógrafo</strong>
         <span>${escapeHtml(profile.email || "")}</span>
+      </div>
+      <div class="account-overview">
+        <div>
+          <span class="status-badge ${isPublished ? "is-published" : "is-hidden"}">${isPublished ? "Publicado" : "Oculto"}</span>
+          <h3>Sua página de portfólio</h3>
+          <p>${isPublished ? "Seu perfil está visível para visitantes na página de portfólios." : "Preencha os dados principais, marque a publicação e salve para liberar sua página."}</p>
+        </div>
+        <div class="account-actions">
+          ${isPublished ? `<a href="${escapeHtml(profileUrl)}" target="_blank" rel="noopener noreferrer">Ver minha página pública</a>` : `<button type="button" disabled>Ver minha página pública</button>`}
+          <button type="button" data-copy-profile-url>Copiar link do portfólio</button>
+        </div>
       </div>
       <form class="account-form" data-photographer-form>
         <label>Nome público<input name="displayName" value="${escapeHtml(photographer.displayName || profile.name || "")}" required /></label>
@@ -862,8 +922,24 @@ const initializeAccount = () => {
   root.addEventListener("click", async (event) => {
     const googleLogin = event.target.closest("[data-google-login]");
     const passwordReset = event.target.closest("[data-password-reset]");
+    const copyProfile = event.target.closest("[data-copy-profile-url]");
     const logout = event.target.closest("[data-account-logout]");
     const remove = event.target.closest("[data-remove-photo]");
+
+    if (copyProfile) {
+      try {
+        const url = publicProfileUrl(appState.user.uid);
+        await copyText(url);
+        setAccountMessage(
+          root,
+          appState.profile?.photographer?.published
+            ? "Link do portfólio copiado."
+            : "Link copiado. Marque Publicar meu portfólio e salve para ele aparecer aos visitantes.",
+        );
+      } catch (error) {
+        setAccountMessage(root, "Nao foi possivel copiar o link. Copie direto pela barra do navegador ao abrir a pagina.");
+      }
+    }
 
     if (passwordReset) {
       const defaultText = passwordReset.textContent;

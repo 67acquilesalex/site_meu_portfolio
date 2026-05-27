@@ -262,7 +262,6 @@ button {
 .about-text span,
 .page-hero span,
 .category-hero a,
-.photographer-profile-head > a,
 .auth-intro span {
   color: inherit;
   font-size: 12px;
@@ -273,7 +272,6 @@ button {
 .home-hero-copy h1,
 .page-hero h1,
 .category-hero h1,
-.photographer-profile-head h2,
 .platform-empty h2 {
   margin: 0;
   font-size: clamp(42px, 7vw, 78px);
@@ -454,7 +452,6 @@ button {
 .section-title p,
 .photographer-card p,
 .photographer-card span,
-.photographer-profile-head p,
 .platform-empty p,
 .account-panel p {
   margin: 0;
@@ -584,8 +581,7 @@ button {
 }
 
 .about-text span,
-.category-hero a,
-.photographer-profile-head > a {
+.category-hero a {
   color: var(--line);
 }
 
@@ -829,11 +825,84 @@ button {
   line-height: 1.2;
 }
 
-.photographer-profile-head {
+.photographer-card small {
+  color: var(--sage-dark);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.photographer-profile-hero {
   grid-column: 1 / -1;
   display: grid;
-  gap: 12px;
-  padding: 10px 0 20px;
+  grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
+  gap: 20px;
+  align-items: stretch;
+  padding: 4px 0 24px;
+}
+
+.profile-back {
+  grid-column: 1 / -1;
+  justify-self: start;
+  color: var(--sage-dark);
+  font-weight: 700;
+}
+
+.profile-cover {
+  overflow: hidden;
+  background: #ddd1c2;
+}
+
+.profile-cover img {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+
+.profile-summary {
+  display: grid;
+  align-content: center;
+  gap: 14px;
+  padding: 24px;
+  background: rgba(255, 250, 244, 0.72);
+  border: 1px solid rgba(86, 68, 54, 0.14);
+}
+
+.profile-summary > span {
+  color: var(--sage-dark);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.profile-summary h2 {
+  margin: 0;
+  color: var(--line);
+  font-size: clamp(30px, 4vw, 52px);
+  font-weight: 400;
+  line-height: 1;
+}
+
+.profile-summary p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.profile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-tags span {
+  min-height: 30px;
+  padding: 7px 10px;
+  color: var(--line);
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(86, 68, 54, 0.14);
 }
 
 .profile-links {
@@ -844,9 +913,18 @@ button {
 
 .profile-links a,
 .profile-links span {
+  display: grid;
   min-height: 34px;
+  place-items: center;
+  border: 1px solid rgba(86, 68, 54, 0.22);
   padding: 0 12px;
+  color: var(--line);
   text-transform: none;
+}
+
+.profile-links a:hover {
+  color: #fff;
+  background: var(--sage-dark);
 }
 
 .photographer-photo {
@@ -1014,7 +1092,13 @@ button {
   background: transparent;
 }
 
+.account-actions button:disabled:hover {
+  color: var(--line);
+  background: transparent;
+}
+
 .account-form button:disabled,
+.account-panel button:disabled,
 .account-form input:disabled,
 .account-form select:disabled,
 .account-form textarea:disabled,
@@ -1030,6 +1114,75 @@ button {
 
 .admin-panel-top span {
   color: var(--muted);
+}
+
+.account-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(86, 68, 54, 0.16);
+}
+
+.account-overview h3,
+.account-overview p {
+  margin: 0;
+}
+
+.account-overview h3 {
+  margin-top: 8px;
+  color: var(--line);
+  font-size: 20px;
+}
+
+.account-overview p {
+  margin-top: 6px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.status-badge {
+  display: inline-grid;
+  min-height: 28px;
+  place-items: center;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-badge.is-published {
+  color: #fff;
+  background: var(--sage-dark);
+}
+
+.status-badge.is-hidden {
+  color: var(--line);
+  background: rgba(86, 68, 54, 0.12);
+}
+
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.account-actions a {
+  display: grid;
+  min-height: 36px;
+  place-items: center;
+  border: 1px solid rgba(86, 68, 54, 0.32);
+  padding: 0 14px;
+  color: var(--line);
+}
+
+.account-actions a:hover {
+  color: #fff;
+  background: var(--sage-dark);
 }
 
 .admin-message {
@@ -1129,9 +1282,23 @@ button {
   .about,
   .project-grid,
   .contact-links,
+  .photographer-profile-hero,
+  .account-overview,
   .account-grid,
   .photo-manager {
     grid-template-columns: 1fr;
+  }
+
+  .profile-cover img {
+    aspect-ratio: 4 / 3;
+  }
+
+  .profile-summary {
+    padding: 20px;
+  }
+
+  .account-actions {
+    justify-content: flex-start;
   }
 
   .home-process {

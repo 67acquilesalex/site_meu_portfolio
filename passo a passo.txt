@@ -1,0 +1,245 @@
+===============================================================================
+PASSO A PASSO ADAPTADO AO SITE DE PORTFOLIOS PARA FOTOGRAFOS
+===============================================================================
+
+Objetivo do projeto:
+Criar uma plataforma onde fotografos possam criar uma pagina publica para
+apresentar seu trabalho, compartilhar fotos, mostrar informacoes profissionais e
+facilitar o contato com clientes.
+
+Este site nao deve ser tratado apenas como o portfolio de uma unica fotografa.
+A ideia principal e evoluir para uma plataforma simples, bonita e organizada,
+onde cada fotografo tenha seu proprio espaco de apresentacao.
+
+-------------------------------------------------------------------------------
+1. POSICIONAMENTO DO SITE
+-------------------------------------------------------------------------------
+
+O site deve funcionar como uma vitrine de fotografos.
+
+Cada fotografo podera:
+- Criar conta.
+- Entrar com email/senha ou Google.
+- Preencher nome publico, cidade, biografia e contatos.
+- Adicionar fotos ao portfolio.
+- Publicar ou ocultar sua pagina.
+- Compartilhar o link da propria pagina com clientes.
+
+Visitantes poderao:
+- Ver a lista de fotografos publicados.
+- Entrar na pagina individual de cada fotografo.
+- Ver fotos, descricao, cidade e links de contato.
+- Chamar o fotografo pelo WhatsApp ou Instagram.
+
+O foco inicial nao deve ser uma rede social completa. Curtidas, seguidores,
+comentarios e chat interno podem ficar para depois. O primeiro objetivo e fazer
+o fotografo conseguir criar e divulgar uma pagina profissional.
+
+-------------------------------------------------------------------------------
+2. MVP - PRIMEIRA VERSAO FUNCIONAL
+-------------------------------------------------------------------------------
+
+O minimo necessario para o site funcionar bem:
+
+1. Cadastro e login
+   - Cadastro por nome, email e senha.
+   - Login com email e senha.
+   - Login com Google.
+   - Recuperacao de senha por email.
+   - Sem escolha entre "fotografo" e "cliente" no cadastro.
+
+2. Area do fotografo
+   - Nome publico.
+   - Cidade.
+   - Biografia.
+   - WhatsApp.
+   - Instagram.
+   - Categorias ou especialidades.
+   - Foto de capa por URL.
+   - Opcao para publicar ou ocultar o portfolio.
+
+3. Fotos do portfolio
+   - Adicionar fotos por URL externa no inicio.
+   - Exibir titulo da foto quando existir.
+   - Remover fotos.
+   - No futuro: upload direto de imagem, reordenacao e albuns.
+
+4. Pagina publica
+   - Lista de fotografos publicados.
+   - Card com foto, nome, cidade e descricao curta.
+   - Pagina individual do fotografo com fotos e dados de contato.
+
+5. Publicacao
+   - Site hospedado na Vercel.
+   - Dados salvos no Firebase Authentication e Firestore.
+   - Imagens hospedadas externamente no inicio, por exemplo Cloudinary, Imgur ou
+     outro servico de imagens.
+
+-------------------------------------------------------------------------------
+3. IDENTIDADE E EXPERIENCIA DO USUARIO
+-------------------------------------------------------------------------------
+
+O site deve passar a sensacao de portfolio profissional, nao de sistema pesado.
+
+Direcao visual:
+- Layout limpo.
+- Fotos grandes e bem valorizadas.
+- Pouco texto nas telas publicas.
+- Cores neutras para nao competir com as imagens.
+- Navegacao simples.
+- Modal de conta direto e facil de entender.
+
+Linguagem recomendada:
+- "Crie sua pagina de portfolio"
+- "Publique seu trabalho"
+- "Compartilhe seu portfolio com clientes"
+- "Adicione fotos e dados de contato"
+
+Evitar nesta fase:
+- Termos muito tecnicos.
+- Promessa de marketplace completo antes de existir busca avancada.
+- Cadastro separado para cliente.
+- Dashboard muito distante do site publico.
+
+-------------------------------------------------------------------------------
+4. ESTRUTURA DE DADOS RECOMENDADA
+-------------------------------------------------------------------------------
+
+Usuarios:
+- uid
+- nome
+- email
+- data de criacao
+- tipo interno, se ainda for necessario para regra de permissao
+
+Perfil do fotografo:
+- uid do fotografo
+- nome publico
+- cidade
+- biografia
+- WhatsApp
+- Instagram
+- categorias
+- foto de capa
+- fotos
+- publicado ou oculto
+- data de criacao/atualizacao
+
+Foto:
+- titulo
+- URL da imagem
+- ordem de exibicao
+- visivel ou oculta, futuramente
+
+Diretorio publico:
+- lista resumida dos fotografos publicados
+- usado para carregar rapidamente a pagina de portfolio
+
+-------------------------------------------------------------------------------
+5. FLUXO IDEAL DO FOTOGRAFO
+-------------------------------------------------------------------------------
+
+1. O fotografo acessa o site.
+2. Clica em "Conta".
+3. Cria conta ou entra com Google.
+4. Preenche o perfil profissional.
+5. Adiciona uma foto de capa.
+6. Adiciona fotos do portfolio.
+7. Marca "Publicar meu portfolio".
+8. Abre a pagina publica para conferir.
+9. Compartilha o link com clientes.
+
+Esse fluxo deve ser o mais curto possivel. Quanto menos campos obrigatorios,
+maior a chance do fotografo terminar o cadastro.
+
+-------------------------------------------------------------------------------
+6. PROXIMAS MELHORIAS IMPORTANTES
+-------------------------------------------------------------------------------
+
+Prioridade alta:
+- Melhorar as mensagens de login e cadastro.
+- Criar botao de redefinir senha.
+- Garantir que contas antigas entrem corretamente na area do fotografo.
+- Melhorar a pagina publica individual do fotografo.
+- Criar link mais bonito para compartilhar, se possivel.
+
+Prioridade media:
+- Reordenar fotos.
+- Esconder/mostrar fotos sem remover.
+- Separar fotos por albuns.
+- Adicionar foto de perfil alem da capa.
+- Criar filtros por cidade e categoria.
+- Melhorar responsividade no celular.
+
+Prioridade futura:
+- Upload direto de imagens.
+- Otimizacao automatica de imagens.
+- Plano gratuito e planos pagos.
+- Dominio personalizado para fotografos.
+- Estatisticas simples de visitas.
+- Favoritos, pedidos de orcamento ou contato estruturado.
+
+-------------------------------------------------------------------------------
+7. CUIDADOS TECNICOS
+-------------------------------------------------------------------------------
+
+Imagens:
+- Fotos pesadas podem deixar o site lento.
+- No inicio, usar URLs externas e orientar o fotografo a usar imagens otimizadas.
+- No futuro, usar Cloudinary, Firebase Storage ou outro servico proprio para
+  upload e compressao.
+
+Firebase:
+- Authentication cuida de login.
+- Firestore guarda dados de usuario e portfolio.
+- As regras do Firestore precisam permitir que cada fotografo edite apenas o
+  proprio perfil.
+- A leitura dos portfolios publicados pode ser publica.
+
+Vercel:
+- O site pode continuar como site estatico enquanto o Firebase cuida dos dados.
+- Depois de cada alteracao importante, publicar novamente para testar no dominio.
+
+Seguranca:
+- Nunca salvar senha manualmente no Firestore.
+- A senha deve ser gerenciada apenas pelo Firebase Authentication.
+- Usar HTTPS, que a Vercel ja fornece no dominio publicado.
+
+-------------------------------------------------------------------------------
+8. O QUE NAO FAZER AGORA
+-------------------------------------------------------------------------------
+
+Nao complicar o projeto antes do MVP funcionar bem.
+
+Evitar por enquanto:
+- Rede social completa.
+- Feed infinito.
+- Chat interno.
+- Comentarios.
+- Sistema de pagamento.
+- Painel administrativo separado e complexo.
+- Cadastro obrigatorio para clientes.
+
+Primeiro, o site precisa resolver bem uma coisa:
+o fotografo cria uma pagina bonita, publica fotos e compartilha seu trabalho.
+
+-------------------------------------------------------------------------------
+9. RESUMO DA DIRECAO DO PROJETO
+-------------------------------------------------------------------------------
+
+Este projeto deve evoluir de um portfolio estatico para uma plataforma simples de
+paginas profissionais para fotografos.
+
+A primeira versao precisa ser direta:
+- Entrar.
+- Preencher perfil.
+- Adicionar fotos.
+- Publicar.
+- Compartilhar.
+
+Depois que esse ciclo estiver funcionando bem, o site pode ganhar filtros,
+albuns, upload direto, planos pagos e outras funcoes maiores.
+
+===============================================================================
+FIM DO DOCUMENTO
+===============================================================================
