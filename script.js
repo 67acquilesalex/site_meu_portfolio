@@ -1,10 +1,11 @@
 import { firebaseConfig } from "./firebase-config.js";
 
 const contact = {
-  brand: "Mari Lopes Fotografia",
-  logo: "assets/marilopes/mari-lopes-logo.png",
-  email: "marilopesfotografia@gmail.com",
-  location: "Florianópolis - SC",
+  brand: "Portfólios Fotográficos",
+  tagline: "Páginas profissionais para fotógrafos",
+  logo: "",
+  email: "contato@portfoliofotografico.com",
+  location: "Brasil",
   whatsapp: "5592999999999",
 };
 
@@ -184,19 +185,22 @@ const navItem = (href, label, slugs) => {
 const renderLayout = () => {
   document.querySelectorAll("[data-site-header], .site-header").forEach((header) => {
     const isServicePage = albumBySlug.has(currentSlug());
+    const brandMarkup = contact.logo
+      ? `<img src="${contact.logo}" alt="${contact.brand}" width="239" height="82" />`
+      : `<span>${escapeHtml(contact.brand)}</span><small>${escapeHtml(contact.tagline)}</small>`;
     header.className = "site-header";
     header.dataset.siteHeader = "";
     header.innerHTML = `
       <div class="site-frame header-frame">
         <a class="brand" href="index.html" aria-label="${contact.brand}">
-          <img src="${contact.logo}" alt="${contact.brand}" width="239" height="82" />
+          ${brandMarkup}
         </a>
         <button class="nav-toggle" type="button" aria-label="Abrir menu" aria-expanded="false">
           <span></span><span></span><span></span>
         </button>
         <nav class="main-nav" aria-label="Site">
           ${navItem("index.html", "Home", ["index"])}
-          ${navItem("portfolio.html", "Portfólio", ["portfolio"])}
+          ${navItem("portfolio.html", "Fotógrafos", ["portfolio"])}
           <div class="menu-group${isServicePage ? " active" : ""}">
             <button type="button" aria-expanded="false">Serviços</button>
             <div class="submenu" aria-label="Serviços">
@@ -276,11 +280,53 @@ const emptyState = (message) => {
   return item;
 };
 
+const directoryEmptyState = () => {
+  const item = document.createElement("article");
+  item.className = "platform-empty directory-empty";
+  item.innerHTML = `
+    <span>Nenhum fotógrafo publicado ainda</span>
+    <h2>Crie a primeira página de portfólio da plataforma.</h2>
+    <p>Entre na sua conta, preencha o perfil, adicione fotos e marque a opção de publicar.</p>
+    <button class="text-button" type="button" data-open-account>Criar minha página</button>
+  `;
+  return item;
+};
+
 const renderDefaultPortfolio = () => {
+  if (currentSlug() === "portfolio") return;
+
   document.querySelectorAll("[data-album-grid]").forEach((gallery) => {
     gallery.classList.remove("photographer-directory", "photographer-detail-grid");
     gallery.replaceChildren(...albums.map(albumCard));
   });
+};
+
+const photographerCard = (photographer) => {
+  const card = document.createElement("a");
+  const categories = Array.isArray(photographer.categories) ? photographer.categories.slice(0, 3) : [];
+  const photos = Array.isArray(photographer.photos) ? photographer.photos : [];
+  card.className = "photographer-card";
+  card.href = `portfolio.html?fotografo=${encodeURIComponent(photographer.uid)}`;
+  card.innerHTML = `
+    <img src="${escapeHtml(photographer.coverUrl || photos[0]?.url || "assets/marilopes/empresarial.jpg")}" alt="${escapeHtml(photographer.displayName || "Fotógrafo")}" loading="lazy" />
+    <div>
+      <strong>${escapeHtml(photographer.displayName || "Fotógrafo")}</strong>
+      <span>${escapeHtml(photographer.city || "Portfólio online")}</span>
+      <p>${escapeHtml(photographer.bio || "Conheça o trabalho deste fotógrafo.")}</p>
+      ${categories.length ? `<small>${categories.map(escapeHtml).join(" • ")}</small>` : ""}
+    </div>
+  `;
+  return card;
+};
+
+const renderDirectory = (gallery, publicPhotographers) => {
+  gallery.classList.add("photographer-directory");
+  gallery.classList.remove("photographer-detail-grid");
+  gallery.replaceChildren(
+    ...(publicPhotographers.length
+      ? publicPhotographers.map(photographerCard)
+      : [directoryEmptyState()]),
+  );
 };
 
 const renderCategoryPages = () => {
@@ -308,46 +354,29 @@ const renderCategoryPages = () => {
 };
 
 const renderPhotographerCards = () => {
+  const params = new URLSearchParams(location.search);
+  const selectedId = params.get("fotografo");
+  const publicPhotographers = appState.photographers.filter((item) => item.published);
+  const directoryGalleries = document.querySelectorAll("[data-photographer-directory]");
+
+  directoryGalleries.forEach((gallery) => renderDirectory(gallery, publicPhotographers));
+
   if (currentSlug() !== "portfolio") {
-    renderDefaultPortfolio();
+    if (!directoryGalleries.length) renderDefaultPortfolio();
     return;
   }
 
   const gallery = document.querySelector("[data-album-grid]");
+  const intro = document.querySelector("[data-portfolio-intro]");
+  if (intro) intro.hidden = Boolean(selectedId);
   if (!gallery) return;
-
-  const params = new URLSearchParams(location.search);
-  const selectedId = params.get("fotografo");
-  const publicPhotographers = appState.photographers.filter((item) => item.published);
 
   if (selectedId) {
     renderPhotographerDetail(gallery, publicPhotographers.find((item) => item.uid === selectedId));
     return;
   }
 
-  if (!publicPhotographers.length) {
-    renderDefaultPortfolio();
-    return;
-  }
-
-  gallery.classList.add("photographer-directory");
-  gallery.classList.remove("photographer-detail-grid");
-  gallery.replaceChildren(...publicPhotographers.map((photographer) => {
-    const card = document.createElement("a");
-    const categories = Array.isArray(photographer.categories) ? photographer.categories.slice(0, 3) : [];
-    card.className = "photographer-card";
-    card.href = `portfolio.html?fotografo=${encodeURIComponent(photographer.uid)}`;
-    card.innerHTML = `
-      <img src="${escapeHtml(photographer.coverUrl || photographer.photos?.[0]?.url || "assets/marilopes/empresarial.jpg")}" alt="${escapeHtml(photographer.displayName || "Fotógrafo")}" loading="lazy" />
-      <div>
-        <strong>${escapeHtml(photographer.displayName || "Fotógrafo")}</strong>
-        <span>${escapeHtml(photographer.city || "Portfólio online")}</span>
-        <p>${escapeHtml(photographer.bio || "Conheça o trabalho deste fotógrafo.")}</p>
-        ${categories.length ? `<small>${categories.map(escapeHtml).join(" • ")}</small>` : ""}
-      </div>
-    `;
-    return card;
-  }));
+  renderDirectory(gallery, publicPhotographers);
 };
 
 const renderPhotographerDetail = (gallery, photographer) => {
@@ -500,7 +529,8 @@ const setFormBusy = (form, busy, label = "Aguarde...") => {
 
 const watchPhotographers = () => {
   if (!appState.firebaseReady) {
-    renderDefaultPortfolio();
+    appState.photographers = [];
+    renderPhotographerCards();
     return;
   }
 
@@ -508,7 +538,10 @@ const watchPhotographers = () => {
     const data = snapshot.data();
     appState.photographers = Array.isArray(data?.photographers) ? data.photographers : [];
     renderPhotographerCards();
-  }, () => renderDefaultPortfolio());
+  }, () => {
+    appState.photographers = [];
+    renderPhotographerCards();
+  });
 };
 
 const saveDirectoryProfile = async (uid, profile) => {
@@ -702,10 +735,21 @@ const buildAccountShell = () => {
   launcher.textContent = "Conta";
   launcher.hidden = false;
   launcher.setAttribute("aria-label", "Abrir conta");
-  launcher.addEventListener("click", () => {
+  const openAccount = () => {
     shell.classList.add("is-open");
     shell.querySelector("input, button, textarea")?.focus();
-  });
+  };
+  launcher.addEventListener("click", openAccount);
+
+  if (!document.body.dataset.accountOpenBound) {
+    document.body.dataset.accountOpenBound = "true";
+    document.addEventListener("click", (event) => {
+      const opener = event.target.closest("[data-open-account]");
+      if (!opener) return;
+      event.preventDefault();
+      openAccount();
+    });
+  }
 
   shell.addEventListener("click", (event) => {
     if (event.target === shell) shell.classList.remove("is-open");
@@ -754,51 +798,88 @@ const renderDashboard = (root, message = "") => {
   const photos = Array.isArray(photographer.photos) ? photographer.photos : [];
   const isPublished = Boolean(photographer.published);
   const profileUrl = publicProfileUrl(profile.uid || appState.user?.uid || "");
+  const missingItems = [
+    !cleanText(photographer.displayName || profile.name) && "nome público",
+    !cleanText(photographer.city) && "cidade",
+    !cleanText(photographer.bio) && "bio",
+    !cleanText(photographer.whatsapp) && "WhatsApp",
+    !photos.length && "fotos",
+  ].filter(Boolean);
+  const readinessMessage = missingItems.length
+    ? `Faltam: ${missingItems.join(", ")}.`
+    : "Seu perfil já tem as informações principais para ser compartilhado.";
 
   root.innerHTML = `
     <div class="account-panel">
-      <div class="admin-panel-top">
-        <strong>Área do fotógrafo</strong>
-        <span>${escapeHtml(profile.email || "")}</span>
-      </div>
-      <div class="account-overview">
+      <div class="account-hero-panel">
         <div>
           <span class="status-badge ${isPublished ? "is-published" : "is-hidden"}">${isPublished ? "Publicado" : "Oculto"}</span>
-          <h3>Sua página de portfólio</h3>
+          <h2>Sua página de portfólio</h2>
           <p>${isPublished ? "Seu perfil está visível para visitantes na página de portfólios." : "Preencha os dados principais, marque a publicação e salve para liberar sua página."}</p>
+          <small>${escapeHtml(readinessMessage)}</small>
         </div>
         <div class="account-actions">
           ${isPublished ? `<a href="${escapeHtml(profileUrl)}" target="_blank" rel="noopener noreferrer">Ver minha página pública</a>` : `<button type="button" disabled>Ver minha página pública</button>`}
           <button type="button" data-copy-profile-url>Copiar link do portfólio</button>
         </div>
       </div>
-      <form class="account-form" data-photographer-form>
-        <label>Nome público<input name="displayName" value="${escapeHtml(photographer.displayName || profile.name || "")}" required /></label>
-        <label>Cidade<input name="city" value="${escapeHtml(photographer.city || "")}" placeholder="Manaus - AM" /></label>
-        <label>Bio<textarea name="bio" rows="3" placeholder="Fale sobre seu estilo e atendimento">${escapeHtml(photographer.bio || "")}</textarea></label>
-        <label>WhatsApp<input name="whatsapp" value="${escapeHtml(photographer.whatsapp || "")}" placeholder="5592999999999" /></label>
-        <label>Instagram<input name="instagram" value="${escapeHtml(photographer.instagram || "")}" placeholder="https://instagram.com/seuperfil" /></label>
-        <label>Categorias<input name="categories" value="${escapeHtml((photographer.categories || []).join(", "))}" placeholder="Casamento, gestante, eventos" /></label>
-        <label>Foto de capa por URL<input name="coverUrl" value="${escapeHtml(photographer.coverUrl || "")}" placeholder="https://..." /></label>
-        <label class="account-check"><input name="published" type="checkbox" ${photographer.published ? "checked" : ""} /> Publicar meu portfólio</label>
-        <button type="submit">Salvar perfil</button>
+
+      <form class="account-editor" data-photographer-form>
+        <section class="account-section">
+          <div class="account-section-head">
+            <span>Perfil</span>
+            <h3>Dados públicos</h3>
+            <p>Essas informações aparecem na sua página e nos cards da vitrine.</p>
+          </div>
+          <div class="account-fields">
+            <label>Nome público<input name="displayName" value="${escapeHtml(photographer.displayName || profile.name || "")}" required /></label>
+            <label>Cidade<input name="city" value="${escapeHtml(photographer.city || "")}" placeholder="Manaus - AM" /></label>
+            <label class="wide">Bio<textarea name="bio" rows="4" placeholder="Fale sobre seu estilo, atendimento e tipos de ensaio">${escapeHtml(photographer.bio || "")}</textarea></label>
+            <label>WhatsApp<input name="whatsapp" value="${escapeHtml(photographer.whatsapp || "")}" placeholder="5592999999999" /></label>
+            <label>Instagram<input name="instagram" value="${escapeHtml(photographer.instagram || "")}" placeholder="@seuperfil ou https://instagram.com/seuperfil" /></label>
+            <label>Categorias<input name="categories" value="${escapeHtml((photographer.categories || []).join(", "))}" placeholder="Casamento, gestante, eventos" /></label>
+            <label class="wide">Foto de capa por URL<input name="coverUrl" value="${escapeHtml(photographer.coverUrl || "")}" placeholder="https://..." /></label>
+          </div>
+        </section>
+
+        <section class="account-section publish-section">
+          <div class="account-section-head">
+            <span>Publicação</span>
+            <h3>Controle de visibilidade</h3>
+            <p>Quando publicado, seu perfil aparece na home e seu link público pode ser compartilhado.</p>
+          </div>
+          <div class="publish-box">
+            <label class="account-check"><input name="published" type="checkbox" ${photographer.published ? "checked" : ""} /> Publicar meu portfólio</label>
+            <button type="submit">Salvar perfil</button>
+          </div>
+        </section>
       </form>
-      <form class="account-form compact" data-photo-form>
-        <h3>Adicionar foto</h3>
-        <label>Titulo<input name="photoTitle" placeholder="Ensaio externo" /></label>
-        <label>URL da imagem<input name="photoUrl" type="url" placeholder="https://..." required /></label>
-        <button type="submit">Adicionar foto</button>
-      </form>
-      <div class="photo-manager">
-        ${photos.map((photo, index) => `
-          <article>
-            <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.title || "Foto")}" loading="lazy" />
-            <span>${escapeHtml(photo.title || "Foto")}</span>
-            <button type="button" data-remove-photo="${index}">Remover</button>
-          </article>
-        `).join("") || `<p class="mock-empty">Adicione links de fotos para montar seu portfólio.</p>`}
+
+      <section class="account-section">
+        <div class="account-section-head">
+          <span>Fotos</span>
+          <h3>Galeria do portfólio</h3>
+          <p>Por enquanto as imagens entram por URL. Depois podemos trocar por upload direto.</p>
+        </div>
+        <form class="account-form compact account-photo-form" data-photo-form>
+          <label>Título<input name="photoTitle" placeholder="Ensaio externo" /></label>
+          <label>URL da imagem<input name="photoUrl" type="url" placeholder="https://..." required /></label>
+          <button type="submit">Adicionar foto</button>
+        </form>
+        <div class="photo-manager">
+          ${photos.map((photo, index) => `
+            <article>
+              <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.title || "Foto")}" loading="lazy" />
+              <span>${escapeHtml(photo.title || "Foto")}</span>
+              <button type="button" data-remove-photo="${index}">Remover</button>
+            </article>
+          `).join("") || `<p class="mock-empty">Adicione links de fotos para montar seu portfólio.</p>`}
+        </div>
+      </section>
+
+      <div class="account-footer-actions">
+        <button type="button" data-account-logout>Sair da conta</button>
       </div>
-      <button type="button" data-account-logout>Sair</button>
       <p class="admin-message" data-account-message>${escapeHtml(message)}</p>
     </div>
   `;
