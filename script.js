@@ -162,10 +162,10 @@ const authErrorMessage = (error) => {
     "auth/operation-not-allowed": "Este tipo de login ainda nao esta ativado no Firebase Authentication.",
     "auth/invalid-email": "Digite o email completo, exemplo: nome@gmail.com.",
     "auth/app-not-authorized": "Este dominio nao esta autorizado para usar esta chave do Firebase.",
-    "permission-denied": "O Firestore negou a escrita. Verifique as regras.",
+    "permission-denied": "O Firestore negou a escrita. Publique as regras do banco de dados no Firebase.",
   };
   if (String(error?.message || "").includes("Missing or insufficient permissions")) {
-    return "O Firestore negou a escrita. Verifique as regras do banco de dados.";
+    return "O Firestore negou a escrita. Publique as regras do banco de dados no Firebase.";
   }
 
   return messages[error?.code] || error?.message || "Não foi possível concluir a operação.";
