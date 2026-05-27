@@ -56,6 +56,8 @@ Para ativar:
 5. Copie a configuracao Web App do Firebase para `firebase-config.js`.
 6. Publique na Vercel.
 
+Se aparecer `auth/api-key-not-valid`, a `apiKey` em `firebase-config.js` nao pertence a um Web App valido do Firebase. No console do Firebase, abra `Project settings > General > Your apps`, selecione ou crie um app Web e copie o bloco `firebaseConfig` completo novamente.
+
 Regras iniciais sugeridas para Firestore:
 
 ```js

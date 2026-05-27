@@ -133,6 +133,8 @@ const authErrorMessage = (error) => {
     "auth/weak-password": "A senha precisa ter pelo menos 6 caracteres.",
     "auth/operation-not-allowed": "Email/senha ainda não está ativado no Firebase Authentication.",
     "auth/unauthorized-domain": "Este domínio não está autorizado no Firebase Authentication.",
+    "auth/api-key-not-valid.-please-pass-a-valid-api-key.": "A chave do Firebase é inválida. Copie novamente a configuração Web App do seu projeto Firebase.",
+    "auth/invalid-api-key": "A chave do Firebase é inválida. Copie novamente a configuração Web App do seu projeto Firebase.",
     "permission-denied": "O Firestore negou a escrita. Verifique as regras.",
   };
   return messages[error?.code] || error?.message || "Não foi possível concluir a operação.";
