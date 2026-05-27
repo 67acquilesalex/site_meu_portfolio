@@ -51,10 +51,11 @@ Para ativar:
 
 1. Crie um projeto no Firebase.
 2. Ative Authentication com provedor Email/Password.
-3. Os usuarios podem ser criados pelo proprio site.
-4. Ative Firestore Database.
-5. Copie a configuracao Web App do Firebase para `firebase-config.js`.
-6. Publique na Vercel.
+3. Para o botao Google funcionar, ative tambem Authentication > Sign-in method > Google.
+4. Os usuarios podem ser criados pelo proprio site.
+5. Ative Firestore Database.
+6. Copie a configuracao Web App do Firebase para `firebase-config.js`.
+7. Publique na Vercel.
 
 Se aparecer `auth/api-key-not-valid`, a `apiKey` em `firebase-config.js` nao pertence a um Web App valido do Firebase. No console do Firebase, abra `Project settings > General > Your apps`, selecione ou crie um app Web e copie o bloco `firebaseConfig` completo novamente.
 

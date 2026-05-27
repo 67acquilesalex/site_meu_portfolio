@@ -960,6 +960,33 @@ button {
   background: rgba(255, 255, 255, 0.46);
 }
 
+.google-access {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(86, 68, 54, 0.16);
+}
+
+.google-access label {
+  display: grid;
+  min-width: min(260px, 100%);
+  gap: 7px;
+  color: var(--line);
+  font-size: 13px;
+}
+
+.google-access select {
+  min-height: 38px;
+  border: 1px solid rgba(86, 68, 54, 0.24);
+  padding: 0 12px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.78);
+}
+
 .account-check {
   grid-template-columns: auto 1fr;
   align-items: center;
@@ -972,7 +999,8 @@ button {
 
 .account-form button,
 .account-panel button,
-.photo-manager button {
+.photo-manager button,
+.google-access button {
   justify-self: start;
   min-height: 36px;
   border: 1px solid rgba(86, 68, 54, 0.32);
@@ -984,7 +1012,8 @@ button {
 
 .account-form button:hover,
 .account-panel button:hover,
-.photo-manager button:hover {
+.photo-manager button:hover,
+.google-access button:hover {
   color: #fff;
   background: var(--sage-dark);
 }
@@ -992,7 +1021,8 @@ button {
 .account-form button:disabled,
 .account-form input:disabled,
 .account-form select:disabled,
-.account-form textarea:disabled {
+.account-form textarea:disabled,
+.google-access button:disabled {
   opacity: 0.65;
   cursor: progress;
 }

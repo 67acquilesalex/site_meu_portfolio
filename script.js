@@ -116,6 +116,20 @@ const appState = {
 const albumBySlug = new Map(albums.map((album) => [album.slug, album]));
 const currentSlug = () => location.pathname.split("/").pop().replace(".html", "") || "index";
 const cleanText = (value, fallback = "") => String(value || fallback).trim();
+const normalizeEmail = (value) => {
+  let email = cleanText(value).replace(/\s+/g, "").toLowerCase();
+  if (email.startsWith("mailto:")) email = email.slice(7);
+  if (email && !email.includes("@")) email = `${email}@gmail.com`;
+  if (email.endsWith("@gmail")) email = `${email}.com`;
+  return email;
+};
+const emailForAuth = (value) => {
+  const email = normalizeEmail(value);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw { code: "local/invalid-email" };
+  }
+  return email;
+};
 const splitList = (value) => cleanText(value).split(",").map((item) => item.trim()).filter(Boolean);
 const escapeHtml = (value) =>
   String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -130,19 +144,30 @@ const authErrorMessage = (error) => {
   const messages = {
     "auth/email-already-in-use": "Este email já está cadastrado.",
     "auth/invalid-email": "Email inválido.",
+    "local/invalid-email": "Digite o email completo, exemplo: nome@gmail.com.",
     "auth/invalid-credential": "Email ou senha incorretos.",
     "auth/user-not-found": "Nao existe conta com este email.",
     "auth/wrong-password": "Senha incorreta.",
     "auth/missing-password": "Digite a senha.",
     "auth/weak-password": "A senha precisa ter pelo menos 6 caracteres.",
     "auth/network-request-failed": "Nao foi possivel conectar ao Firebase. Verifique sua internet e tente de novo.",
+    "auth/account-exists-with-different-credential": "Ja existe uma conta com este email usando outro tipo de login.",
+    "auth/popup-closed-by-user": "Login com Google cancelado.",
+    "auth/popup-blocked": "O navegador bloqueou a janela do Google. Permita pop-ups para este site.",
+    "auth/cancelled-popup-request": "A janela de login do Google ja estava aberta.",
     "auth/operation-not-allowed": "Email/senha ainda não está ativado no Firebase Authentication.",
     "auth/unauthorized-domain": "Este domínio não está autorizado no Firebase Authentication.",
     "auth/api-key-not-valid.-please-pass-a-valid-api-key.": "A chave do Firebase é inválida. Copie novamente a configuração Web App do seu projeto Firebase.",
     "auth/invalid-api-key": "A chave do Firebase é inválida. Copie novamente a configuração Web App do seu projeto Firebase.",
+    "auth/operation-not-allowed": "Este tipo de login ainda nao esta ativado no Firebase Authentication.",
+    "auth/invalid-email": "Digite o email completo, exemplo: nome@gmail.com.",
     "auth/app-not-authorized": "Este dominio nao esta autorizado para usar esta chave do Firebase.",
     "permission-denied": "O Firestore negou a escrita. Verifique as regras.",
   };
+  if (String(error?.message || "").includes("Missing or insufficient permissions")) {
+    return "O Firestore negou a escrita. Verifique as regras do banco de dados.";
+  }
+
   return messages[error?.code] || error?.message || "Não foi possível concluir a operação.";
 };
 
@@ -483,6 +508,51 @@ const readOwnProfile = async (user) => {
   }
 };
 
+const createDefaultProfile = async (user, role = "fotografo") => {
+  const profile = {
+    uid: user.uid,
+    name: cleanText(user.displayName, user.email),
+    email: user.email || "",
+    role,
+    createdAt: timestamp(),
+  };
+
+  await appState.modules.firestore.setDoc(userDoc(user.uid), profile, { merge: true });
+
+  if (profile.role === "fotografo") {
+    const photographerSnapshot = await appState.modules.firestore.getDoc(photographerDoc(user.uid));
+    const photographerProfile = photographerSnapshot.exists()
+      ? photographerSnapshot.data()
+      : {
+          displayName: profile.name,
+          city: "",
+          bio: "",
+          whatsapp: "",
+          instagram: "",
+          coverUrl: "",
+          categories: [],
+          photos: [],
+          published: false,
+          createdAt: timestamp(),
+        };
+
+    await appState.modules.firestore.setDoc(photographerDoc(user.uid), photographerProfile, { merge: true });
+    profile.photographer = photographerProfile;
+  }
+
+  appState.profile = profile;
+};
+
+const readOrCreateProfile = async (user, role = "fotografo") => {
+  const snapshot = await appState.modules.firestore.getDoc(userDoc(user.uid));
+  if (!snapshot.exists()) {
+    await createDefaultProfile(user, role);
+    return;
+  }
+
+  await readOwnProfile(user);
+};
+
 const savePhotographerProfile = async (form) => {
   const formData = new FormData(form);
   const currentPhotos = appState.profile?.photographer?.photos || [];
@@ -591,14 +661,14 @@ const renderAuthForms = (root, message = "") => {
     <div class="account-grid">
       <form class="account-form" data-login-form>
         <h3>Entrar</h3>
-        <label>Email<input name="email" type="email" autocomplete="username" required /></label>
+        <label>Email<input name="email" type="text" inputmode="email" autocomplete="username" placeholder="nome@gmail.com" required /></label>
         <label>Senha<input name="password" type="password" autocomplete="current-password" required /></label>
         <button type="submit">Entrar</button>
       </form>
       <form class="account-form" data-register-form>
         <h3>Criar conta</h3>
         <label>Nome<input name="name" autocomplete="name" required /></label>
-        <label>Email<input name="email" type="email" autocomplete="email" required /></label>
+        <label>Email<input name="email" type="text" inputmode="email" autocomplete="email" placeholder="nome@gmail.com" required /></label>
         <label>Senha<input name="password" type="password" autocomplete="new-password" minlength="6" required /></label>
         <label>Tipo
           <select name="role" required>
@@ -608,6 +678,15 @@ const renderAuthForms = (root, message = "") => {
         </label>
         <button type="submit">Cadastrar</button>
       </form>
+    </div>
+    <div class="google-access">
+      <label>Tipo da conta ao entrar com Google
+        <select data-google-role>
+          <option value="fotografo">Fotografo</option>
+          <option value="cliente">Cliente</option>
+        </select>
+      </label>
+      <button type="button" data-google-login>Continuar com Google</button>
     </div>
     <p class="admin-message" data-account-message>${escapeHtml(message)}</p>
   `;
@@ -716,7 +795,7 @@ const initializeAccount = () => {
         accountSubmitInProgress = true;
         setFormBusy(loginForm, true, "Entrando...");
         const formData = new FormData(loginForm);
-        const credential = await appState.modules.auth.signInWithEmailAndPassword(appState.auth, cleanText(formData.get("email")), String(formData.get("password") || ""));
+        const credential = await appState.modules.auth.signInWithEmailAndPassword(appState.auth, emailForAuth(formData.get("email")), String(formData.get("password") || ""));
         appState.user = credential.user;
         await readOwnProfile(credential.user);
         renderDashboard(root, "Login realizado.");
@@ -728,15 +807,16 @@ const initializeAccount = () => {
         accountSubmitInProgress = true;
         setFormBusy(registerForm, true, "Criando conta...");
         const formData = new FormData(registerForm);
+        const email = emailForAuth(formData.get("email"));
         const credential = await appState.modules.auth.createUserWithEmailAndPassword(
           appState.auth,
-          cleanText(formData.get("email")),
+          email,
           String(formData.get("password") || ""),
         );
         const profile = {
           uid: credential.user.uid,
           name: cleanText(formData.get("name")),
-          email: cleanText(formData.get("email")),
+          email,
           role: cleanText(formData.get("role"), "cliente"),
           createdAt: timestamp(),
         };
@@ -786,8 +866,34 @@ const initializeAccount = () => {
   });
 
   root.addEventListener("click", async (event) => {
+    const googleLogin = event.target.closest("[data-google-login]");
     const logout = event.target.closest("[data-account-logout]");
     const remove = event.target.closest("[data-remove-photo]");
+
+    if (googleLogin) {
+      const defaultText = googleLogin.textContent;
+      accountSubmitInProgress = true;
+      googleLogin.disabled = true;
+      googleLogin.textContent = "Abrindo Google...";
+      setAccountMessage(root, "");
+
+      try {
+        const provider = new appState.modules.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: "select_account" });
+        const credential = await appState.modules.auth.signInWithPopup(appState.auth, provider);
+        const role = cleanText(root.querySelector("[data-google-role]")?.value, "fotografo");
+        appState.user = credential.user;
+        await readOrCreateProfile(credential.user, role);
+        renderDashboard(root, "Login com Google realizado.");
+        shell.classList.add("is-open");
+      } catch (error) {
+        setAccountMessage(root, authErrorMessage(error));
+      } finally {
+        accountSubmitInProgress = false;
+        googleLogin.disabled = false;
+        googleLogin.textContent = defaultText;
+      }
+    }
 
     if (logout) {
       await appState.modules.auth.signOut(appState.auth);
