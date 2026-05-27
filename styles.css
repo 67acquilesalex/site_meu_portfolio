@@ -994,12 +994,24 @@ button {
   cursor: pointer;
 }
 
+.account-form .account-link {
+  min-height: 0;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+}
+
 .account-form button:hover,
 .account-panel button:hover,
 .photo-manager button:hover,
 .google-access button:hover {
   color: #fff;
   background: var(--sage-dark);
+}
+
+.account-form .account-link:hover {
+  color: var(--line);
+  background: transparent;
 }
 
 .account-form button:disabled,

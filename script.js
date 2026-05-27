@@ -146,16 +146,16 @@ const escapeHtml = (value) =>
 
 const authErrorMessage = (error) => {
   const messages = {
-    "auth/email-already-in-use": "Este email já está cadastrado.",
+    "auth/email-already-in-use": "Este email já está cadastrado. Entre com a senha, use Google ou redefina a senha.",
     "auth/invalid-email": "Confira o email. Remova espacos ou caracteres extras e tente novamente.",
     "local/invalid-email": "Digite o email completo, exemplo: nome@gmail.com.",
-    "auth/invalid-credential": "Email ou senha incorretos.",
+    "auth/invalid-credential": "Email ou senha incorretos. Se a conta foi criada com Google, use o botão Google. Se esqueceu a senha, redefina abaixo.",
     "auth/user-not-found": "Nao existe conta com este email.",
     "auth/wrong-password": "Senha incorreta.",
     "auth/missing-password": "Digite a senha.",
     "auth/weak-password": "A senha precisa ter pelo menos 6 caracteres.",
     "auth/network-request-failed": "Nao foi possivel conectar ao Firebase. Verifique sua internet e tente de novo.",
-    "auth/account-exists-with-different-credential": "Ja existe uma conta com este email usando outro tipo de login.",
+    "auth/account-exists-with-different-credential": "Ja existe uma conta com este email usando outro tipo de login. Tente entrar com Google.",
     "auth/popup-closed-by-user": "Login com Google cancelado.",
     "auth/popup-blocked": "O navegador bloqueou a janela do Google. Permita pop-ups para este site.",
     "auth/cancelled-popup-request": "A janela de login do Google ja estava aberta.",
@@ -684,6 +684,7 @@ const renderAuthForms = (root, message = "") => {
         <label>Email<input name="email" type="email" inputmode="email" autocomplete="username" placeholder="nome@gmail.com" required /></label>
         <label>Senha<input name="password" type="password" autocomplete="current-password" required /></label>
         <button type="submit">Entrar</button>
+        <button class="account-link" type="button" data-password-reset>Esqueci minha senha</button>
       </form>
       <form class="account-form" data-register-form>
         <h3>Criar conta</h3>
@@ -860,8 +861,28 @@ const initializeAccount = () => {
 
   root.addEventListener("click", async (event) => {
     const googleLogin = event.target.closest("[data-google-login]");
+    const passwordReset = event.target.closest("[data-password-reset]");
     const logout = event.target.closest("[data-account-logout]");
     const remove = event.target.closest("[data-remove-photo]");
+
+    if (passwordReset) {
+      const defaultText = passwordReset.textContent;
+      passwordReset.disabled = true;
+      passwordReset.textContent = "Enviando...";
+      setAccountMessage(root, "");
+
+      try {
+        const loginForm = root.querySelector("[data-login-form]");
+        const email = emailForAuth(new FormData(loginForm).get("email"));
+        await appState.modules.auth.sendPasswordResetEmail(appState.auth, email);
+        setAccountMessage(root, `Enviamos um link de redefinição para ${email}.`);
+      } catch (error) {
+        setAccountMessage(root, authErrorMessage(error));
+      } finally {
+        passwordReset.disabled = false;
+        passwordReset.textContent = defaultText;
+      }
+    }
 
     if (googleLogin) {
       const defaultText = googleLogin.textContent;
