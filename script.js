@@ -447,7 +447,7 @@ const setFormBusy = (form, busy, label = "Aguarde...") => {
     button.textContent = busy ? label : button.dataset.defaultText;
   }
 
-  form.querySelectorAll("button, input, select, textarea").forEach((control) => {
+  form.querySelectorAll("button").forEach((control) => {
     control.disabled = busy;
   });
 };
