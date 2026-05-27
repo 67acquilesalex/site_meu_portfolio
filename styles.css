@@ -495,7 +495,8 @@ button {
 .home-process ol,
 .account-form,
 .account-panel,
-.photo-manager article {
+.photo-manager article,
+.service-manager article {
   display: grid;
   gap: 12px;
 }
@@ -1123,6 +1124,13 @@ body.photographer-site-view .site-footer {
   border: 1px solid rgba(86, 68, 54, 0.14);
 }
 
+.service-grid article img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: #ddd1c2;
+}
+
 .service-grid span {
   color: rgba(86, 68, 54, 0.62);
   font-size: 12px;
@@ -1345,7 +1353,7 @@ body.photographer-site-view .site-footer {
 }
 
 .account-modal {
-  width: min(1040px, 100%);
+  width: min(1180px, 100%);
   max-height: calc(100vh - 48px);
   overflow: auto;
   padding: 16px;
@@ -1380,7 +1388,8 @@ body.photographer-site-view .site-footer {
 }
 
 .account-grid,
-.photo-manager {
+.photo-manager,
+.service-manager {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
@@ -1389,6 +1398,114 @@ body.photographer-site-view .site-footer {
 .account-panel {
   display: grid;
   gap: 16px;
+}
+
+.account-editor-layout {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.account-sidebar {
+  position: sticky;
+  top: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.account-tabs {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  background: rgba(255, 250, 244, 0.72);
+  border: 1px solid rgba(86, 68, 54, 0.16);
+}
+
+.account-tabs button {
+  justify-content: start;
+  width: 100%;
+  min-height: 36px;
+  border: 0;
+  padding: 0 10px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.account-tabs button:hover,
+.account-tabs button.is-active {
+  color: #fff;
+  background: var(--sage-dark);
+}
+
+.account-preview {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(255, 250, 244, 0.72);
+  border: 1px solid rgba(86, 68, 54, 0.16);
+}
+
+.account-preview > span {
+  color: var(--sage-dark);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.account-preview img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: #ddd1c2;
+}
+
+.account-preview strong {
+  color: var(--line);
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.account-preview p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.account-preview-meta,
+.account-preview-sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.account-preview-meta small,
+.account-preview-sections span {
+  padding: 5px 7px;
+  color: var(--line);
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(86, 68, 54, 0.12);
+  font-size: 11px;
+}
+
+.account-preview a {
+  display: grid;
+  min-height: 34px;
+  place-items: center;
+  border: 1px solid rgba(86, 68, 54, 0.32);
+  padding: 0 12px;
+  color: var(--line);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.account-preview a:hover {
+  color: #fff;
+  background: var(--sage-dark);
 }
 
 .account-hero-panel,
@@ -1437,6 +1554,14 @@ body.photographer-site-view .site-footer {
   gap: 14px;
 }
 
+.account-tab-panel {
+  display: none;
+}
+
+.account-tab-panel.is-active {
+  display: grid;
+}
+
 .account-section {
   padding: 18px;
 }
@@ -1458,15 +1583,37 @@ body.photographer-site-view .site-footer {
 }
 
 .account-fields,
-.account-photo-form {
+.account-photo-form,
+.account-inline-form,
+.account-toggle-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
 .account-fields .wide,
-.account-photo-form button {
+.account-photo-form button,
+.account-inline-form button,
+.account-editor-actions {
   grid-column: 1 / -1;
+}
+
+.account-inline-form {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(86, 68, 54, 0.12);
+}
+
+.account-toggle-grid {
+  align-items: center;
+}
+
+.account-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 2px 0;
 }
 
 .publish-section {
@@ -1555,6 +1702,22 @@ body.photographer-site-view .site-footer {
   background: transparent;
 }
 
+.account-panel .account-tabs button {
+  justify-content: start;
+  width: 100%;
+  border: 0;
+  padding: 0 10px;
+  color: var(--muted);
+  background: transparent;
+  text-align: left;
+}
+
+.account-panel .account-tabs button:hover,
+.account-panel .account-tabs button.is-active {
+  color: #fff;
+  background: var(--sage-dark);
+}
+
 .account-actions button:disabled:hover {
   color: var(--line);
   background: transparent;
@@ -1616,12 +1779,14 @@ body.photographer-site-view .site-footer {
   color: #8f3e31;
 }
 
-.photo-manager {
+.photo-manager,
+.service-manager {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
-.photo-manager article {
+.photo-manager article,
+.service-manager article {
   align-content: start;
   padding: 8px;
   background: rgba(255, 255, 255, 0.58);
@@ -1637,6 +1802,17 @@ body.photographer-site-view .site-footer {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.service-manager {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.service-manager article > span {
+  color: var(--sage-dark);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .mock-empty {
@@ -1714,12 +1890,24 @@ body.photographer-site-view .site-footer {
   .contact-links,
   .photographer-profile-hero,
   .account-hero-panel,
+  .account-editor-layout,
   .account-fields,
   .account-photo-form,
+  .account-inline-form,
+  .account-toggle-grid,
   .publish-section,
   .account-grid,
-  .photo-manager {
+  .photo-manager,
+  .service-manager {
     grid-template-columns: 1fr;
+  }
+
+  .account-sidebar {
+    position: static;
+  }
+
+  .account-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .profile-cover img {
@@ -1827,5 +2015,13 @@ body.photographer-site-view .site-footer {
 
   .gallery-item {
     min-height: 280px;
+  }
+
+  .account-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .account-modal {
+    padding: 10px;
   }
 }

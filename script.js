@@ -112,9 +112,36 @@ const appState = {
   photographers: [],
   profile: null,
   user: null,
+  accountTab: "inicio",
 };
 
 const DEFAULT_ACCOUNT_ROLE = "fotografo";
+const DEFAULT_PAGE_SETTINGS = {
+  template: "classico",
+  primaryColor: "#68745f",
+  showHero: true,
+  showPortfolio: true,
+  showServices: true,
+  showBudget: true,
+  showContact: true,
+  sectionOrder: ["inicio", "portfolio", "projetos", "orcamento", "contato"],
+};
+const EDITOR_TABS = [
+  ["inicio", "Inicio"],
+  ["portfolio", "Portfolio"],
+  ["servicos", "Servicos"],
+  ["orcamento", "Orcamento"],
+  ["contato", "Contato"],
+  ["aparencia", "Aparencia"],
+  ["publicacao", "Publicacao"],
+];
+const PUBLIC_PAGES = [
+  ["inicio", "Inicio", "showHero"],
+  ["portfolio", "Portfolio", "showPortfolio"],
+  ["projetos", "Projetos", "showServices"],
+  ["orcamento", "Orcamento", "showBudget"],
+  ["contato", "Contato", "showContact"],
+];
 const albumBySlug = new Map(albums.map((album) => [album.slug, album]));
 const currentSlug = () => location.pathname.split("/").pop().replace(".html", "") || "index";
 const cleanText = (value, fallback = "") => String(value || fallback).trim();
@@ -144,6 +171,139 @@ const escapeHtml = (value) =>
     '"': "&quot;",
     "'": "&#39;",
   })[char]);
+
+const normalizeHexColor = (value, fallback = DEFAULT_PAGE_SETTINGS.primaryColor) => {
+  const color = cleanText(value, fallback);
+  return /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
+};
+
+const makeId = (prefix) => {
+  const random = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${prefix}-${random}`;
+};
+
+const normalizePageSettings = (page = {}) => {
+  const current = page || {};
+  const sectionOrder = Array.isArray(current.sectionOrder) && current.sectionOrder.length
+    ? current.sectionOrder.filter((section) => PUBLIC_PAGES.some(([id]) => id === section))
+    : DEFAULT_PAGE_SETTINGS.sectionOrder;
+
+  return {
+    ...DEFAULT_PAGE_SETTINGS,
+    ...current,
+    template: ["classico", "editorial", "minimal"].includes(current.template) ? current.template : DEFAULT_PAGE_SETTINGS.template,
+    primaryColor: normalizeHexColor(current.primaryColor),
+    showHero: current.showHero !== false,
+    showPortfolio: current.showPortfolio !== false,
+    showServices: current.showServices !== false,
+    showBudget: current.showBudget !== false,
+    showContact: current.showContact !== false,
+    sectionOrder,
+  };
+};
+
+const normalizePhotos = (photos = []) => (Array.isArray(photos) ? photos : [])
+  .map((photo, index) => {
+    const url = typeof photo === "string" ? photo : photo?.url;
+    const title = typeof photo === "string" ? "Foto" : photo?.title;
+
+    return {
+      ...(typeof photo === "object" && photo ? photo : {}),
+      id: cleanText(photo?.id, `photo-${index}`),
+      url: cleanText(url),
+      title: cleanText(title, "Foto"),
+      order: Number.isFinite(Number(photo?.order)) ? Number(photo.order) : index,
+      visible: photo?.visible !== false,
+      featured: Boolean(photo?.featured),
+      createdAt: photo?.createdAt || Date.now(),
+    };
+  })
+  .filter((photo) => photo.url)
+  .sort((first, second) => first.order - second.order);
+
+const normalizeStoredServices = (services = []) => (Array.isArray(services) ? services : [])
+  .map((service, index) => {
+    const rawTitle = typeof service === "string" ? service : service?.title;
+
+    return {
+      ...(typeof service === "object" && service ? service : {}),
+      id: cleanText(service?.id, `service-${index}`),
+      title: cleanText(rawTitle),
+      description: cleanText(service?.description),
+      imageUrl: cleanText(service?.imageUrl),
+      order: Number.isFinite(Number(service?.order)) ? Number(service.order) : index,
+      visible: service?.visible !== false,
+    };
+  })
+  .filter((service) => service.title)
+  .sort((first, second) => first.order - second.order);
+
+const serviceListForDisplay = (photographer = {}) => {
+  const services = normalizeStoredServices(photographer.services);
+  if (services.length) return services;
+
+  const categories = Array.isArray(photographer.categories) ? photographer.categories.filter(Boolean) : [];
+  return categories.map((category, index) => ({
+    id: `category-${index}`,
+    title: category,
+    description: "Projeto fotografico com direcao, cuidado visual e entrega em pagina de portfolio.",
+    imageUrl: "",
+    order: index,
+    visible: true,
+  }));
+};
+
+const normalizeBudget = (photographer = {}) => {
+  const budget = photographer.budget || {};
+  return {
+    title: cleanText(budget.title, "Solicite uma proposta"),
+    text: cleanText(budget.text, "Envie uma mensagem direta com as informacoes principais do projeto."),
+    whatsapp: cleanText(budget.whatsapp, photographer.whatsapp || ""),
+    defaultMessage: cleanText(budget.defaultMessage, "Ola! Gostaria de solicitar um orcamento fotografico."),
+  };
+};
+
+const defaultPhotographerProfile = (displayName = "") => ({
+  displayName,
+  city: "",
+  bio: "",
+  headline: "",
+  whatsapp: "",
+  instagram: "",
+  publicEmail: "",
+  coverUrl: "",
+  availability: "",
+  categories: [],
+  photos: [],
+  services: [],
+  page: { ...DEFAULT_PAGE_SETTINGS },
+  budget: normalizeBudget({}),
+  published: false,
+});
+
+const normalizePhotographerProfile = (profile = {}, fallbackName = "") => {
+  const current = profile || {};
+  return {
+    ...current,
+    displayName: cleanText(current.displayName, fallbackName),
+    city: cleanText(current.city),
+    bio: cleanText(current.bio),
+    headline: cleanText(current.headline),
+    whatsapp: cleanText(current.whatsapp),
+    instagram: cleanText(current.instagram),
+    publicEmail: cleanText(current.publicEmail),
+    coverUrl: cleanText(current.coverUrl),
+    availability: cleanText(current.availability),
+    categories: Array.isArray(current.categories) ? current.categories.map((item) => cleanText(item)).filter(Boolean) : [],
+    photos: normalizePhotos(current.photos),
+    services: normalizeStoredServices(current.services),
+    page: normalizePageSettings(current.page),
+    budget: normalizeBudget(current),
+    published: Boolean(current.published),
+  };
+};
+
+const visibleProfilePhotos = (photographer = {}) => normalizePhotos(photographer.photos).filter((photo) => photo.visible !== false);
 
 const authErrorMessage = (error) => {
   const messages = {
@@ -297,16 +457,18 @@ const renderDefaultPortfolio = () => {
 
 const photographerCard = (photographer) => {
   const card = document.createElement("a");
-  const categories = Array.isArray(photographer.categories) ? photographer.categories.slice(0, 3) : [];
-  const photos = Array.isArray(photographer.photos) ? photographer.photos : [];
+  const profile = normalizePhotographerProfile(photographer);
+  const serviceNames = serviceListForDisplay(profile).map((service) => service.title);
+  const categories = (profile.categories.length ? profile.categories : serviceNames).slice(0, 3);
+  const photos = visibleProfilePhotos(profile);
   card.className = "photographer-card";
   card.href = `portfolio.html?fotografo=${encodeURIComponent(photographer.uid)}`;
   card.innerHTML = `
-    <img src="${escapeHtml(photographer.coverUrl || photos[0]?.url || "assets/marilopes/empresarial.jpg")}" alt="${escapeHtml(photographer.displayName || "Fotógrafo")}" loading="lazy" />
+    <img src="${escapeHtml(profile.coverUrl || photos[0]?.url || "assets/marilopes/empresarial.jpg")}" alt="${escapeHtml(profile.displayName || "Fotógrafo")}" loading="lazy" />
     <div>
-      <strong>${escapeHtml(photographer.displayName || "Fotógrafo")}</strong>
-      <span>${escapeHtml(photographer.city || "Portfólio online")}</span>
-      <p>${escapeHtml(photographer.bio || "Conheça o trabalho deste fotógrafo.")}</p>
+      <strong>${escapeHtml(profile.displayName || "Fotógrafo")}</strong>
+      <span>${escapeHtml(profile.city || "Portfólio online")}</span>
+      <p>${escapeHtml(profile.bio || "Conheça o trabalho deste fotógrafo.")}</p>
       ${categories.length ? `<small>${categories.map(escapeHtml).join(" • ")}</small>` : ""}
     </div>
   `;
@@ -367,7 +529,7 @@ const renderPhotographerCards = () => {
   if (!gallery) return;
 
   if (selectedId) {
-    renderPhotographerDetail(gallery, publicPhotographers.find((item) => item.uid === selectedId));
+    renderPhotographerSite(gallery, publicPhotographers.find((item) => item.uid === selectedId));
     return;
   }
 
@@ -540,6 +702,183 @@ const renderPhotographerDetail = (gallery, photographer) => {
   gallery.replaceChildren(site);
 };
 
+const renderPhotographerSite = (gallery, photographer) => {
+  gallery.classList.add("photographer-detail-grid");
+  gallery.classList.remove("photographer-directory");
+
+  if (!photographer) {
+    gallery.replaceChildren(emptyState("Esse fotógrafo ainda não publicou o perfil ou o link está incorreto."));
+    return;
+  }
+
+  const profile = normalizePhotographerProfile(photographer);
+  const page = normalizePageSettings(profile.page);
+  const photos = visibleProfilePhotos(profile);
+  const featuredPhoto = photos.find((photo) => photo.featured) || photos[0];
+  const categories = profile.categories;
+  const services = serviceListForDisplay(profile).filter((service) => service.visible !== false);
+  const budget = normalizeBudget(profile);
+  const coverUrl = profile.coverUrl || featuredPhoto?.url || "assets/marilopes/empresarial.jpg";
+  const instagram = instagramUrl(profile.instagram);
+  const whatsapp = whatsappUrl(profile.whatsapp);
+  const budgetWhatsapp = whatsappUrl(budget.whatsapp || profile.whatsapp);
+  const publicEmail = cleanText(profile.publicEmail);
+  const displayName = profile.displayName || "Fotógrafo";
+  const headline = profile.headline || profile.bio || "Portfolio fotografico com ensaios, projetos e contatos profissionais.";
+  const availablePages = PUBLIC_PAGES.filter(([, , visibilityKey]) => page[visibilityKey] !== false);
+  if (!availablePages.length) availablePages.push(PUBLIC_PAGES[0]);
+
+  const requestedPage = new URLSearchParams(location.search).get("pagina") || availablePages[0][0];
+  const activePage = availablePages.some(([id]) => id === requestedPage) ? requestedPage : availablePages[0][0];
+  const pageHref = (pageId) => publicProfilePath(photographer.uid, pageId);
+  const activeClass = (pageId) => activePage === pageId ? ' class="active"' : "";
+  const isVisible = (pageId) => availablePages.some(([id]) => id === pageId);
+  const navLinks = availablePages.map(([id, label]) => `<a${activeClass(id)} href="${escapeHtml(pageHref(id))}">${label}</a>`).join("");
+
+  const heroSection = `
+    <section class="photographer-site-hero" id="inicio">
+      <img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(displayName)}" loading="eager" />
+      <div>
+        <span>Portfólio de fotografia</span>
+        <h1>${escapeHtml(displayName)}</h1>
+        <p>${escapeHtml(headline)}</p>
+        <div class="profile-tags">
+          ${profile.city ? `<span>${escapeHtml(profile.city)}</span>` : ""}
+          ${categories.map((category) => `<span>${escapeHtml(category)}</span>`).join("")}
+        </div>
+        <div class="profile-links">
+          ${isVisible("portfolio") ? `<a href="${escapeHtml(pageHref("portfolio"))}">Ver portfólio</a>` : ""}
+          ${budgetWhatsapp && isVisible("orcamento") ? `<a href="${escapeHtml(pageHref("orcamento"))}">Pedir orçamento</a>` : ""}
+          ${instagram ? `<a href="${escapeHtml(instagram)}" target="_blank" rel="noopener noreferrer">Instagram</a>` : ""}
+        </div>
+      </div>
+    </section>
+  `;
+  const portfolioSection = `
+    <section class="photographer-site-section" id="portfolio">
+      <div class="photographer-section-head">
+        <span>Portfólio</span>
+        <h2>Galeria de trabalhos</h2>
+        <p>Uma seleção das fotos publicadas por ${escapeHtml(displayName)}.</p>
+      </div>
+      <div class="photographer-site-gallery">
+        ${photos.length ? photos.map((photo) => `
+          <figure>
+            <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.title || displayName || "Foto")}" loading="lazy" />
+            ${photo.title ? `<figcaption>${escapeHtml(photo.title)}</figcaption>` : ""}
+          </figure>
+        `).join("") : `<p class="mock-empty">Este fotógrafo ainda não publicou fotos visíveis.</p>`}
+      </div>
+    </section>
+  `;
+  const projectsSection = `
+    <section class="photographer-site-section" id="servicos">
+      <div class="photographer-section-head">
+        <span>Projetos e serviços</span>
+        <h2>Especialidades do fotógrafo</h2>
+        <p>Serviços cadastrados pelo fotógrafo para orientar o pedido do cliente.</p>
+      </div>
+      <div class="service-grid">
+        ${services.length ? services.map((service, index) => `
+          <article>
+            ${service.imageUrl ? `<img src="${escapeHtml(service.imageUrl)}" alt="${escapeHtml(service.title)}" loading="lazy" />` : ""}
+            <span>${String(index + 1).padStart(2, "0")}</span>
+            <h3>${escapeHtml(service.title)}</h3>
+            <p>${escapeHtml(service.description || "Projeto fotografico com direcao, cuidado visual e entrega em pagina de portfolio.")}</p>
+          </article>
+        `).join("") : `<p class="mock-empty">Este fotógrafo ainda não cadastrou serviços visíveis.</p>`}
+      </div>
+    </section>
+  `;
+  const budgetSection = `
+    <section class="photographer-site-section photographer-budget" id="orcamento">
+      <div class="photographer-section-head">
+        <span>Orçamento</span>
+        <h2>${escapeHtml(budget.title)}</h2>
+        <p>${escapeHtml(budget.text)}</p>
+      </div>
+      ${budgetWhatsapp ? `
+        <form class="quote-form" data-profile-budget>
+          <label>Nome<input name="nome" required placeholder="Seu nome" /></label>
+          <label>WhatsApp<input name="telefone" placeholder="Seu WhatsApp" /></label>
+          <label>Tipo de ensaio/serviço<input name="segmento" placeholder="${escapeHtml(services[0]?.title || categories[0] || "Ensaio fotográfico")}" /></label>
+          <label>Data desejada<input name="data" type="date" /></label>
+          <label class="wide">Mensagem<textarea name="mensagem" rows="4" placeholder="Conte um pouco sobre o que você precisa"></textarea></label>
+          <button class="form-button" type="submit">Enviar pelo WhatsApp</button>
+        </form>
+      ` : `<p class="mock-empty">Este fotógrafo ainda não adicionou WhatsApp para orçamentos.</p>`}
+    </section>
+  `;
+  const contactLinks = [
+    whatsapp ? `<a href="${escapeHtml(whatsapp)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : "",
+    instagram ? `<a href="${escapeHtml(instagram)}" target="_blank" rel="noopener noreferrer">Instagram</a>` : "",
+    publicEmail ? `<a href="mailto:${escapeHtml(publicEmail)}">${escapeHtml(publicEmail)}</a>` : "",
+    profile.city ? `<span>${escapeHtml(profile.city)}</span>` : "",
+  ].filter(Boolean).join("");
+  const contactSection = `
+    <section class="photographer-site-section" id="contato">
+      <div class="photographer-section-head">
+        <span>Contato</span>
+        <h2>Fale com ${escapeHtml(displayName)}</h2>
+        <p>${escapeHtml(profile.availability || "Use os canais publicados pelo fotógrafo para conversar sobre datas, projetos e disponibilidade.")}</p>
+      </div>
+      <div class="contact-links photographer-contact-links">
+        ${contactLinks || `<p class="mock-empty">Este fotógrafo ainda não publicou canais de contato.</p>`}
+      </div>
+    </section>
+  `;
+  const pageSections = {
+    inicio: heroSection,
+    portfolio: portfolioSection,
+    projetos: projectsSection,
+    orcamento: budgetSection,
+    contato: contactSection,
+  };
+  const site = document.createElement("article");
+  site.className = `photographer-site photographer-template-${page.template}`;
+  site.style.setProperty("--line", page.primaryColor);
+  site.style.setProperty("--sage-dark", page.primaryColor);
+  site.innerHTML = `
+    <header class="photographer-site-header">
+      <a class="photographer-site-brand" href="${escapeHtml(pageHref(availablePages[0][0]))}">
+        <strong>${escapeHtml(displayName)}</strong>
+        <span>${escapeHtml(profile.city || "Portfólio fotográfico")}</span>
+      </a>
+      <nav aria-label="Portfolio de ${escapeHtml(displayName)}">
+        ${navLinks}
+      </nav>
+      <a class="profile-back" href="portfolio.html">Voltar aos fotógrafos</a>
+    </header>
+    ${pageSections[activePage] || pageSections[availablePages[0][0]]}
+
+    <footer class="photographer-site-footer">
+      <span>${escapeHtml(displayName)}</span>
+      <a href="portfolio.html">Ver outros fotógrafos</a>
+    </footer>
+  `;
+
+  const budgetForm = site.querySelector("[data-profile-budget]");
+  if (budgetForm && budgetWhatsapp) {
+    budgetForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const formData = new FormData(budgetForm);
+      const message = [
+        budget.defaultMessage || `Ola, ${displayName}! Gostaria de solicitar um orcamento.`,
+        "",
+        `Nome: ${formData.get("nome") || ""}`,
+        `WhatsApp: ${formData.get("telefone") || ""}`,
+        `Servico: ${formData.get("segmento") || ""}`,
+        `Data desejada: ${formData.get("data") || "A definir"}`,
+        `Mensagem: ${formData.get("mensagem") || ""}`,
+      ].join("\n");
+
+      window.open(`${budgetWhatsapp}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+    });
+  }
+
+  gallery.replaceChildren(site);
+};
+
 const initializeBudgetForm = () => {
   const budgetForm = document.querySelector("[data-budget-form]");
   if (!budgetForm) return;
@@ -645,6 +984,13 @@ const setFormBusy = (form, busy, label = "Aguarde...") => {
   });
 };
 
+const setButtonBusy = (button, busy, label = "Aguarde...") => {
+  if (!button) return;
+  if (!button.dataset.defaultText) button.dataset.defaultText = button.textContent;
+  button.textContent = busy ? label : button.dataset.defaultText;
+  button.disabled = busy;
+};
+
 const watchPhotographers = () => {
   if (!appState.firebaseReady) {
     appState.photographers = [];
@@ -665,19 +1011,24 @@ const watchPhotographers = () => {
 const saveDirectoryProfile = async (uid, profile) => {
   const snapshot = await appState.modules.firestore.getDoc(directoryDoc());
   const current = Array.isArray(snapshot.data()?.photographers) ? snapshot.data().photographers : [];
+  const normalized = normalizePhotographerProfile(profile);
   const publicProfile = {
     uid,
-    displayName: profile.displayName || "",
-    city: profile.city || "",
-    bio: profile.bio || "",
-    headline: profile.headline || "",
-    whatsapp: profile.whatsapp || "",
-    instagram: profile.instagram || "",
-    publicEmail: profile.publicEmail || "",
-    categories: Array.isArray(profile.categories) ? profile.categories : [],
-    coverUrl: profile.coverUrl || "",
-    photos: Array.isArray(profile.photos) ? profile.photos : [],
-    published: Boolean(profile.published),
+    displayName: normalized.displayName || "",
+    city: normalized.city || "",
+    bio: normalized.bio || "",
+    headline: normalized.headline || "",
+    whatsapp: normalized.whatsapp || "",
+    instagram: normalized.instagram || "",
+    publicEmail: normalized.publicEmail || "",
+    availability: normalized.availability || "",
+    categories: normalized.categories,
+    coverUrl: normalized.coverUrl || "",
+    photos: normalized.photos,
+    services: normalized.services,
+    page: normalized.page,
+    budget: normalized.budget,
+    published: Boolean(normalized.published),
   };
 
   await appState.modules.firestore.setDoc(
@@ -713,19 +1064,10 @@ const readOwnProfile = async (user) => {
   if (appState.profile.role === DEFAULT_ACCOUNT_ROLE) {
     const photographerSnapshot = await appState.modules.firestore.getDoc(photographerDoc(user.uid));
     appState.profile.photographer = photographerSnapshot.exists()
-      ? photographerSnapshot.data()
+      ? normalizePhotographerProfile(photographerSnapshot.data(), appState.profile.name || "")
       : {
-          displayName: appState.profile.name || "",
-          city: "",
-          bio: "",
-          headline: "",
-          whatsapp: "",
-          instagram: "",
-          publicEmail: "",
-          coverUrl: "",
-          categories: [],
-          photos: [],
-          published: false,
+          ...defaultPhotographerProfile(appState.profile.name || ""),
+          createdAt: timestamp(),
         };
   }
 };
@@ -744,19 +1086,9 @@ const createDefaultProfile = async (user) => {
   if (profile.role === DEFAULT_ACCOUNT_ROLE) {
     const photographerSnapshot = await appState.modules.firestore.getDoc(photographerDoc(user.uid));
     const photographerProfile = photographerSnapshot.exists()
-      ? photographerSnapshot.data()
+      ? normalizePhotographerProfile(photographerSnapshot.data(), profile.name || "")
       : {
-          displayName: profile.name,
-          city: "",
-          bio: "",
-          headline: "",
-          whatsapp: "",
-          instagram: "",
-          publicEmail: "",
-          coverUrl: "",
-          categories: [],
-          photos: [],
-          published: false,
+          ...defaultPhotographerProfile(profile.name),
           createdAt: timestamp(),
         };
 
@@ -777,11 +1109,57 @@ const readOrCreateProfile = async (user) => {
   await readOwnProfile(user);
 };
 
+const readPhotoEditors = (form, currentPhotos) => {
+  const currentById = new Map(normalizePhotos(currentPhotos).map((photo) => [photo.id, photo]));
+  return [...form.querySelectorAll("[data-photo-editor]")].map((editor, index) => {
+    const id = cleanText(editor.dataset.photoId, makeId("photo"));
+    const current = currentById.get(id) || {};
+
+    return {
+      ...current,
+      id,
+      url: cleanText(editor.dataset.photoUrl || current.url),
+      title: cleanText(editor.querySelector("[data-photo-title]")?.value, "Foto"),
+      visible: editor.querySelector("[data-photo-visible]")?.checked !== false,
+      featured: Boolean(editor.querySelector("[data-photo-featured]")?.checked),
+      order: index,
+    };
+  }).filter((photo) => photo.url);
+};
+
+const readServiceEditors = (form, currentServices) => {
+  const currentById = new Map(normalizeStoredServices(currentServices).map((service) => [service.id, service]));
+  return [...form.querySelectorAll("[data-service-editor]")].map((editor, index) => {
+    const id = cleanText(editor.dataset.serviceId, makeId("service"));
+    const current = currentById.get(id) || {};
+
+    return {
+      ...current,
+      id,
+      title: cleanText(editor.querySelector("[data-service-title]")?.value),
+      description: cleanText(editor.querySelector("[data-service-description]")?.value),
+      imageUrl: cleanText(editor.querySelector("[data-service-image]")?.value),
+      visible: editor.querySelector("[data-service-visible]")?.checked !== false,
+      order: index,
+    };
+  }).filter((service) => service.title);
+};
+
 const savePhotographerProfile = async (form) => {
   const formData = new FormData(form);
-  const currentPhotos = appState.profile?.photographer?.photos || [];
+  const currentProfile = normalizePhotographerProfile(appState.profile?.photographer || {}, appState.profile?.name || "");
+  const page = normalizePageSettings({
+    template: cleanText(formData.get("template"), DEFAULT_PAGE_SETTINGS.template),
+    primaryColor: cleanText(formData.get("primaryColor"), DEFAULT_PAGE_SETTINGS.primaryColor),
+    showHero: formData.get("showHero") === "on",
+    showPortfolio: formData.get("showPortfolio") === "on",
+    showServices: formData.get("showServices") === "on",
+    showBudget: formData.get("showBudget") === "on",
+    showContact: formData.get("showContact") === "on",
+    sectionOrder: currentProfile.page.sectionOrder,
+  });
   const nextProfile = {
-    ...appState.profile.photographer,
+    ...currentProfile,
     displayName: cleanText(formData.get("displayName")),
     city: cleanText(formData.get("city")),
     bio: cleanText(formData.get("bio")),
@@ -790,9 +1168,22 @@ const savePhotographerProfile = async (form) => {
     instagram: cleanText(formData.get("instagram")),
     publicEmail: cleanText(formData.get("publicEmail")),
     coverUrl: cleanText(formData.get("coverUrl")),
+    availability: cleanText(formData.get("availability")),
     categories: splitList(formData.get("categories")),
+    page,
+    budget: normalizeBudget({
+      ...currentProfile,
+      whatsapp: cleanText(formData.get("whatsapp")),
+      budget: {
+        title: cleanText(formData.get("budgetTitle")),
+        text: cleanText(formData.get("budgetText")),
+        whatsapp: cleanText(formData.get("budgetWhatsapp")),
+        defaultMessage: cleanText(formData.get("budgetDefaultMessage")),
+      },
+    }),
+    services: readServiceEditors(form, currentProfile.services),
     published: formData.get("published") === "on",
-    photos: currentPhotos,
+    photos: readPhotoEditors(form, currentProfile.photos),
     updatedAt: timestamp(),
   };
 
@@ -801,35 +1192,96 @@ const savePhotographerProfile = async (form) => {
   appState.profile.photographer = nextProfile;
 };
 
-const addPhoto = async (form) => {
-  const formData = new FormData(form);
-  const url = cleanText(formData.get("photoUrl"));
+const addPhoto = async (root) => {
+  const titleInput = root.querySelector("[data-new-photo-title]");
+  const urlInput = root.querySelector("[data-new-photo-url]");
+  const url = cleanText(urlInput?.value);
   if (!url) return;
 
-  const current = appState.profile?.photographer || {};
-  const photos = Array.isArray(current.photos) ? current.photos : [];
+  const current = normalizePhotographerProfile(appState.profile?.photographer || {}, appState.profile?.name || "");
+  const photos = normalizePhotos(current.photos);
   const nextProfile = {
     ...current,
     coverUrl: current.coverUrl || url,
-    photos: [...photos, { url, title: cleanText(formData.get("photoTitle"), "Foto"), createdAt: Date.now() }],
+    photos: [
+      ...photos,
+      {
+        id: makeId("photo"),
+        url,
+        title: cleanText(titleInput?.value, "Foto"),
+        order: photos.length,
+        visible: true,
+        featured: photos.length === 0,
+        createdAt: Date.now(),
+      },
+    ],
     updatedAt: timestamp(),
   };
 
   await appState.modules.firestore.setDoc(photographerDoc(appState.user.uid), nextProfile, { merge: true });
   await saveDirectoryProfile(appState.user.uid, nextProfile);
   appState.profile.photographer = nextProfile;
-  form.reset();
+  if (titleInput) titleInput.value = "";
+  if (urlInput) urlInput.value = "";
 };
 
-const removePhoto = async (index) => {
-  const current = appState.profile?.photographer || {};
-  const photos = Array.isArray(current.photos) ? [...current.photos] : [];
-  const removed = photos.splice(index, 1)[0];
+const removePhoto = async (photoId) => {
+  const current = normalizePhotographerProfile(appState.profile?.photographer || {}, appState.profile?.name || "");
+  const photos = normalizePhotos(current.photos);
+  const removed = photos.find((photo) => photo.id === photoId);
+  const nextPhotos = photos.filter((photo) => photo.id !== photoId).map((photo, index) => ({ ...photo, order: index }));
   const coverWasRemoved = removed?.url && current.coverUrl === removed.url;
   const nextProfile = {
     ...current,
-    photos,
-    coverUrl: coverWasRemoved ? photos[0]?.url || "" : current.coverUrl || photos[0]?.url || "",
+    photos: nextPhotos,
+    coverUrl: coverWasRemoved ? nextPhotos[0]?.url || "" : current.coverUrl || nextPhotos[0]?.url || "",
+    updatedAt: timestamp(),
+  };
+
+  await appState.modules.firestore.setDoc(photographerDoc(appState.user.uid), nextProfile, { merge: true });
+  await saveDirectoryProfile(appState.user.uid, nextProfile);
+  appState.profile.photographer = nextProfile;
+};
+
+const addService = async (root) => {
+  const titleInput = root.querySelector("[data-new-service-title]");
+  const descriptionInput = root.querySelector("[data-new-service-description]");
+  const title = cleanText(titleInput?.value);
+  if (!title) return;
+
+  const current = normalizePhotographerProfile(appState.profile?.photographer || {}, appState.profile?.name || "");
+  const services = normalizeStoredServices(current.services);
+  const nextProfile = {
+    ...current,
+    services: [
+      ...services,
+      {
+        id: makeId("service"),
+        title,
+        description: cleanText(descriptionInput?.value),
+        imageUrl: "",
+        order: services.length,
+        visible: true,
+      },
+    ],
+    updatedAt: timestamp(),
+  };
+
+  await appState.modules.firestore.setDoc(photographerDoc(appState.user.uid), nextProfile, { merge: true });
+  await saveDirectoryProfile(appState.user.uid, nextProfile);
+  appState.profile.photographer = nextProfile;
+  if (titleInput) titleInput.value = "";
+  if (descriptionInput) descriptionInput.value = "";
+};
+
+const removeService = async (serviceId) => {
+  const current = normalizePhotographerProfile(appState.profile?.photographer || {}, appState.profile?.name || "");
+  const services = normalizeStoredServices(current.services)
+    .filter((service) => service.id !== serviceId)
+    .map((service, index) => ({ ...service, order: index }));
+  const nextProfile = {
+    ...current,
+    services,
     updatedAt: timestamp(),
   };
 
@@ -918,7 +1370,7 @@ const renderAuthForms = (root, message = "") => {
   `;
 };
 
-const renderDashboard = (root, message = "") => {
+const renderLegacyDashboard = (root, message = "") => {
   const profile = appState.profile || {};
   const photographer = profile.photographer || {};
   const photos = Array.isArray(photographer.photos) ? photographer.photos : [];
@@ -1013,6 +1465,239 @@ const renderDashboard = (root, message = "") => {
   `;
 };
 
+const activeAccountTab = () => EDITOR_TABS.some(([id]) => id === appState.accountTab) ? appState.accountTab : "inicio";
+
+const accountTabPanelClass = (tab) => `account-section account-tab-panel${activeAccountTab() === tab ? " is-active" : ""}`;
+
+const accountTabButton = ([id, label]) => `
+  <button class="${activeAccountTab() === id ? "is-active" : ""}" type="button" data-account-tab="${id}" aria-selected="${activeAccountTab() === id ? "true" : "false"}">${label}</button>
+`;
+
+const photoEditorMarkup = (photo, index) => `
+  <article data-photo-editor data-photo-id="${escapeHtml(photo.id)}" data-photo-url="${escapeHtml(photo.url)}">
+    <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.title || "Foto")}" loading="lazy" />
+    <label>Titulo<input value="${escapeHtml(photo.title || "")}" data-photo-title /></label>
+    <label class="account-check"><input type="checkbox" data-photo-visible ${photo.visible !== false ? "checked" : ""} /> Visivel na pagina</label>
+    <label class="account-check"><input type="checkbox" data-photo-featured ${photo.featured ? "checked" : ""} /> Foto de destaque</label>
+    <span>Posicao ${index + 1}</span>
+    <button type="button" data-remove-photo="${escapeHtml(photo.id)}">Remover</button>
+  </article>
+`;
+
+const serviceEditorMarkup = (service, index) => `
+  <article data-service-editor data-service-id="${escapeHtml(service.id)}">
+    <span>Servico ${String(index + 1).padStart(2, "0")}</span>
+    <label>Titulo<input value="${escapeHtml(service.title || "")}" data-service-title /></label>
+    <label>Descricao<textarea rows="3" data-service-description>${escapeHtml(service.description || "")}</textarea></label>
+    <label>Imagem opcional por URL<input value="${escapeHtml(service.imageUrl || "")}" data-service-image placeholder="https://..." /></label>
+    <label class="account-check"><input type="checkbox" data-service-visible ${service.visible !== false ? "checked" : ""} /> Visivel na pagina</label>
+    <button type="button" data-remove-service="${escapeHtml(service.id)}">Remover servico</button>
+  </article>
+`;
+
+const accountPreviewMarkup = (photographer, profileUrl, readinessMessage) => {
+  const page = normalizePageSettings(photographer.page);
+  const photos = visibleProfilePhotos(photographer);
+  const services = serviceListForDisplay(photographer).filter((service) => service.visible !== false);
+  const coverUrl = photographer.coverUrl || photos[0]?.url || "assets/marilopes/empresarial.jpg";
+  const visibleSections = PUBLIC_PAGES
+    .filter(([, , visibilityKey]) => page[visibilityKey] !== false)
+    .map(([, label]) => label);
+
+  return `
+    <aside class="account-preview" style="--line: ${escapeHtml(page.primaryColor)}; --sage-dark: ${escapeHtml(page.primaryColor)}">
+      <span>Previa salva</span>
+      <img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(photographer.displayName || "Capa do portfolio")}" loading="lazy" />
+      <strong>${escapeHtml(photographer.displayName || "Seu nome publico")}</strong>
+      <p>${escapeHtml(photographer.headline || photographer.bio || readinessMessage)}</p>
+      <div class="account-preview-meta">
+        ${photographer.city ? `<small>${escapeHtml(photographer.city)}</small>` : ""}
+        <small>${photos.length} foto${photos.length === 1 ? "" : "s"} visiveis</small>
+        <small>${services.length} servico${services.length === 1 ? "" : "s"}</small>
+      </div>
+      <div class="account-preview-sections">
+        ${visibleSections.map((section) => `<span>${escapeHtml(section)}</span>`).join("")}
+      </div>
+      <a href="${escapeHtml(profileUrl)}" target="_blank" rel="noopener noreferrer">Abrir preview publico</a>
+    </aside>
+  `;
+};
+
+const renderDashboard = (root, message = "") => {
+  const profile = appState.profile || {};
+  const photographer = normalizePhotographerProfile(profile.photographer || {}, profile.name || "");
+  if (!appState.profile) appState.profile = profile;
+  appState.profile.photographer = photographer;
+
+  const photos = normalizePhotos(photographer.photos);
+  const services = normalizeStoredServices(photographer.services);
+  const page = normalizePageSettings(photographer.page);
+  const budget = normalizeBudget(photographer);
+  const isPublished = Boolean(photographer.published);
+  const profileUrl = publicProfileUrl(profile.uid || appState.user?.uid || "");
+  const missingItems = [
+    !cleanText(photographer.displayName || profile.name) && "nome publico",
+    !cleanText(photographer.city) && "cidade",
+    !cleanText(photographer.bio) && "bio",
+    !cleanText(photographer.whatsapp) && "WhatsApp",
+    !photos.length && "fotos",
+  ].filter(Boolean);
+  const readinessMessage = missingItems.length
+    ? `Faltam: ${missingItems.join(", ")}.`
+    : "Sua pagina ja tem as informacoes principais para ser compartilhada.";
+
+  root.innerHTML = `
+    <div class="account-panel account-editor-panel">
+      <div class="account-hero-panel">
+        <div>
+          <span class="status-badge ${isPublished ? "is-published" : "is-hidden"}">${isPublished ? "Publicado" : "Oculto"}</span>
+          <h2>Minha pagina</h2>
+          <p>${isPublished ? "Seu perfil esta visivel para visitantes na pagina de fotografos." : "Edite os blocos, salve como rascunho e publique quando estiver pronto."}</p>
+          <small>${escapeHtml(readinessMessage)}</small>
+        </div>
+        <div class="account-actions">
+          ${isPublished ? `<a href="${escapeHtml(profileUrl)}" target="_blank" rel="noopener noreferrer">Ver pagina publica</a>` : `<button type="button" disabled>Ver pagina publica</button>`}
+          <button type="button" data-copy-profile-url>Copiar link</button>
+          <button type="button" data-publish-now>Publicar alteracoes</button>
+        </div>
+      </div>
+
+      <div class="account-editor-layout">
+        <aside class="account-sidebar">
+          <nav class="account-tabs" aria-label="Blocos do editor">
+            ${EDITOR_TABS.map(accountTabButton).join("")}
+          </nav>
+          ${accountPreviewMarkup(photographer, profileUrl, readinessMessage)}
+        </aside>
+
+        <form class="account-editor" data-photographer-form>
+          <section class="${accountTabPanelClass("inicio")}" data-account-tab-panel="inicio">
+            <div class="account-section-head">
+              <span>Inicio / Hero</span>
+              <h3>Apresentacao da pagina</h3>
+              <p>Dados principais exibidos no topo da pagina publica e na vitrine.</p>
+            </div>
+            <div class="account-fields">
+              <label>Nome publico<input name="displayName" value="${escapeHtml(photographer.displayName || profile.name || "")}" required /></label>
+              <label>Cidade<input name="city" value="${escapeHtml(photographer.city || "")}" placeholder="Manaus - AM" /></label>
+              <label class="wide">Frase de destaque<input name="headline" value="${escapeHtml(photographer.headline || "")}" placeholder="Fotografia leve para contar historias reais" /></label>
+              <label class="wide">Bio<textarea name="bio" rows="4" placeholder="Fale sobre seu estilo, atendimento e tipos de ensaio">${escapeHtml(photographer.bio || "")}</textarea></label>
+              <label class="wide">Foto de capa por URL<input name="coverUrl" value="${escapeHtml(photographer.coverUrl || "")}" placeholder="https://..." /></label>
+            </div>
+          </section>
+
+          <section class="${accountTabPanelClass("portfolio")}" data-account-tab-panel="portfolio">
+            <div class="account-section-head">
+              <span>Portfolio</span>
+              <h3>Fotos publicadas</h3>
+              <p>Adicione imagens por URL, ajuste titulos e escolha quais aparecem no site.</p>
+            </div>
+            <div class="account-inline-form">
+              <label>Titulo da nova foto<input data-new-photo-title placeholder="Ensaio externo" /></label>
+              <label>URL da imagem<input data-new-photo-url placeholder="https://..." /></label>
+              <button type="button" data-add-photo>Adicionar foto</button>
+            </div>
+            <div class="photo-manager">
+              ${photos.map(photoEditorMarkup).join("") || `<p class="mock-empty">Adicione links de fotos para montar seu portfolio.</p>`}
+            </div>
+          </section>
+
+          <section class="${accountTabPanelClass("servicos")}" data-account-tab-panel="servicos">
+            <div class="account-section-head">
+              <span>Projetos / Servicos</span>
+              <h3>Servicos dinamicos</h3>
+              <p>Cadastre os tipos de trabalho que clientes podem contratar.</p>
+            </div>
+            <div class="account-fields">
+              <label class="wide">Categorias rapidas<input name="categories" value="${escapeHtml((photographer.categories || []).join(", "))}" placeholder="Casamento, gestante, eventos" /></label>
+            </div>
+            <div class="account-inline-form">
+              <label>Novo servico<input data-new-service-title placeholder="Ensaio gestante" /></label>
+              <label>Descricao curta<input data-new-service-description placeholder="Direcao leve, externa ou estudio" /></label>
+              <button type="button" data-add-service>Adicionar servico</button>
+            </div>
+            <div class="service-manager">
+              ${services.map(serviceEditorMarkup).join("") || `<p class="mock-empty">Crie servicos para substituir as categorias genericas na pagina publica.</p>`}
+            </div>
+          </section>
+
+          <section class="${accountTabPanelClass("orcamento")}" data-account-tab-panel="orcamento">
+            <div class="account-section-head">
+              <span>Orcamento</span>
+              <h3>Chamada e WhatsApp</h3>
+              <p>Texto e numero usados na pagina de pedido de proposta.</p>
+            </div>
+            <div class="account-fields">
+              <label>Titulo<input name="budgetTitle" value="${escapeHtml(budget.title)}" /></label>
+              <label>WhatsApp do orcamento<input name="budgetWhatsapp" value="${escapeHtml(budget.whatsapp)}" placeholder="5592999999999" /></label>
+              <label class="wide">Texto de chamada<textarea name="budgetText" rows="3">${escapeHtml(budget.text)}</textarea></label>
+              <label class="wide">Mensagem padrao do WhatsApp<textarea name="budgetDefaultMessage" rows="3">${escapeHtml(budget.defaultMessage)}</textarea></label>
+            </div>
+          </section>
+
+          <section class="${accountTabPanelClass("contato")}" data-account-tab-panel="contato">
+            <div class="account-section-head">
+              <span>Contato</span>
+              <h3>Canais publicos</h3>
+              <p>Essas informacoes aparecem na pagina de contato e nos botoes principais.</p>
+            </div>
+            <div class="account-fields">
+              <label>WhatsApp<input name="whatsapp" value="${escapeHtml(photographer.whatsapp || "")}" placeholder="5592999999999" /></label>
+              <label>Instagram<input name="instagram" value="${escapeHtml(photographer.instagram || "")}" placeholder="@seuperfil ou https://instagram.com/seuperfil" /></label>
+              <label>Email publico<input name="publicEmail" type="email" value="${escapeHtml(photographer.publicEmail || "")}" placeholder="contato@seudominio.com" /></label>
+              <label class="wide">Disponibilidade<textarea name="availability" rows="3" placeholder="Atendo em Manaus e regiao com agenda sob consulta">${escapeHtml(photographer.availability || "")}</textarea></label>
+            </div>
+          </section>
+
+          <section class="${accountTabPanelClass("aparencia")}" data-account-tab-panel="aparencia">
+            <div class="account-section-head">
+              <span>Aparencia</span>
+              <h3>Estilo visual</h3>
+              <p>Controle simples de template e cor principal sem liberar edicao livre do layout.</p>
+            </div>
+            <div class="account-fields">
+              <label>Template
+                <select name="template">
+                  <option value="classico" ${page.template === "classico" ? "selected" : ""}>Classico</option>
+                  <option value="editorial" ${page.template === "editorial" ? "selected" : ""}>Editorial</option>
+                  <option value="minimal" ${page.template === "minimal" ? "selected" : ""}>Minimal</option>
+                </select>
+              </label>
+              <label>Cor principal<input name="primaryColor" type="color" value="${escapeHtml(page.primaryColor)}" /></label>
+            </div>
+          </section>
+
+          <section class="${accountTabPanelClass("publicacao")}" data-account-tab-panel="publicacao">
+            <div class="account-section-head">
+              <span>Publicacao</span>
+              <h3>Visibilidade da pagina</h3>
+              <p>Escolha se o portfolio aparece na vitrine e quais secoes ficam ativas.</p>
+            </div>
+            <div class="account-toggle-grid">
+              <label class="account-check"><input name="published" type="checkbox" ${isPublished ? "checked" : ""} /> Publicar meu portfolio</label>
+              <label class="account-check"><input name="showHero" type="checkbox" ${page.showHero ? "checked" : ""} /> Mostrar Inicio</label>
+              <label class="account-check"><input name="showPortfolio" type="checkbox" ${page.showPortfolio ? "checked" : ""} /> Mostrar Portfolio</label>
+              <label class="account-check"><input name="showServices" type="checkbox" ${page.showServices ? "checked" : ""} /> Mostrar Servicos</label>
+              <label class="account-check"><input name="showBudget" type="checkbox" ${page.showBudget ? "checked" : ""} /> Mostrar Orcamento</label>
+              <label class="account-check"><input name="showContact" type="checkbox" ${page.showContact ? "checked" : ""} /> Mostrar Contato</label>
+            </div>
+          </section>
+
+          <div class="account-editor-actions">
+            <button type="submit">Salvar rascunho</button>
+            <button type="button" data-publish-now>Publicar alteracoes</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="account-footer-actions">
+        <button type="button" data-account-logout>Sair da conta</button>
+      </div>
+      <p class="admin-message" data-account-message>${escapeHtml(message)}</p>
+    </div>
+  `;
+};
+
 const initializeAccount = () => {
   const shell = buildAccountShell();
   const root = shell.querySelector("[data-account-root]");
@@ -1049,8 +1734,7 @@ const initializeAccount = () => {
     const loginForm = event.target.closest("[data-login-form]");
     const registerForm = event.target.closest("[data-register-form]");
     const photographerForm = event.target.closest("[data-photographer-form]");
-    const photoForm = event.target.closest("[data-photo-form]");
-    const activeForm = loginForm || registerForm || photographerForm || photoForm;
+    const activeForm = loginForm || registerForm || photographerForm;
     setAccountMessage(root, "");
 
     try {
@@ -1088,15 +1772,7 @@ const initializeAccount = () => {
 
         if (profile.role === DEFAULT_ACCOUNT_ROLE) {
           const photographerProfile = {
-            displayName: profile.name,
-            city: "",
-            bio: "",
-            whatsapp: "",
-            instagram: "",
-            coverUrl: "",
-            categories: [],
-            photos: [],
-            published: false,
+            ...defaultPhotographerProfile(profile.name),
             createdAt: timestamp(),
           };
           await appState.modules.firestore.setDoc(photographerDoc(credential.user.uid), photographerProfile);
@@ -1115,11 +1791,6 @@ const initializeAccount = () => {
         renderDashboard(root, "Perfil salvo.");
       }
 
-      if (photoForm) {
-        setFormBusy(photoForm, true, "Adicionando...");
-        await addPhoto(photoForm);
-        renderDashboard(root, "Foto adicionada.");
-      }
     } catch (error) {
       setAccountMessage(root, authErrorMessage(error));
     } finally {
@@ -1134,6 +1805,25 @@ const initializeAccount = () => {
     const copyProfile = event.target.closest("[data-copy-profile-url]");
     const logout = event.target.closest("[data-account-logout]");
     const remove = event.target.closest("[data-remove-photo]");
+    const removeServiceButton = event.target.closest("[data-remove-service]");
+    const tabButton = event.target.closest("[data-account-tab]");
+    const publishNow = event.target.closest("[data-publish-now]");
+    const addPhotoButton = event.target.closest("[data-add-photo]");
+    const addServiceButton = event.target.closest("[data-add-service]");
+
+    if (tabButton) {
+      appState.accountTab = tabButton.dataset.accountTab || "inicio";
+      renderDashboard(root);
+      return;
+    }
+
+    if (publishNow) {
+      const form = root.querySelector("[data-photographer-form]");
+      const published = form?.querySelector('input[name="published"]');
+      if (published) published.checked = true;
+      form?.requestSubmit();
+      return;
+    }
 
     if (copyProfile) {
       try {
@@ -1198,9 +1888,60 @@ const initializeAccount = () => {
       shell.classList.remove("is-open");
     }
 
+    if (addPhotoButton) {
+      const url = cleanText(root.querySelector("[data-new-photo-url]")?.value);
+      if (!url) {
+        setAccountMessage(root, "Informe a URL da foto antes de adicionar.");
+        return;
+      }
+
+      try {
+        setButtonBusy(addPhotoButton, true, "Adicionando...");
+        await addPhoto(root);
+        renderDashboard(root, "Foto adicionada.");
+      } catch (error) {
+        setAccountMessage(root, authErrorMessage(error));
+      } finally {
+        setButtonBusy(addPhotoButton, false);
+      }
+    }
+
+    if (addServiceButton) {
+      const title = cleanText(root.querySelector("[data-new-service-title]")?.value);
+      if (!title) {
+        setAccountMessage(root, "Informe o titulo do servico antes de adicionar.");
+        return;
+      }
+
+      try {
+        setButtonBusy(addServiceButton, true, "Adicionando...");
+        await addService(root);
+        renderDashboard(root, "Servico adicionado.");
+      } catch (error) {
+        setAccountMessage(root, authErrorMessage(error));
+      } finally {
+        setButtonBusy(addServiceButton, false);
+      }
+    }
+
     if (remove) {
-      await removePhoto(Number(remove.dataset.removePhoto));
-      renderDashboard(root);
+      try {
+        setButtonBusy(remove, true, "Removendo...");
+        await removePhoto(remove.dataset.removePhoto);
+        renderDashboard(root, "Foto removida.");
+      } catch (error) {
+        setAccountMessage(root, authErrorMessage(error));
+      }
+    }
+
+    if (removeServiceButton) {
+      try {
+        setButtonBusy(removeServiceButton, true, "Removendo...");
+        await removeService(removeServiceButton.dataset.removeService);
+        renderDashboard(root, "Servico removido.");
+      } catch (error) {
+        setAccountMessage(root, authErrorMessage(error));
+      }
     }
   });
 };
