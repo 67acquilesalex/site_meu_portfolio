@@ -182,9 +182,10 @@ const navItem = (href, label, slugs) => {
   return `<a${active} href="${href}">${label}</a>`;
 };
 
+const navButton = (label, className = "") => `<button class="${className}" type="button" data-open-account>${label}</button>`;
+
 const renderLayout = () => {
   document.querySelectorAll("[data-site-header], .site-header").forEach((header) => {
-    const isServicePage = albumBySlug.has(currentSlug());
     const brandMarkup = contact.logo
       ? `<img src="${contact.logo}" alt="${contact.brand}" width="239" height="82" />`
       : `<span>${escapeHtml(contact.brand)}</span><small>${escapeHtml(contact.tagline)}</small>`;
@@ -201,15 +202,8 @@ const renderLayout = () => {
         <nav class="main-nav" aria-label="Site">
           ${navItem("index.html", "Home", ["index"])}
           ${navItem("portfolio.html", "Fotógrafos", ["portfolio"])}
-          <div class="menu-group${isServicePage ? " active" : ""}">
-            <button type="button" aria-expanded="false">Serviços</button>
-            <div class="submenu" aria-label="Serviços">
-              ${albums.map((album) => `<a href="${album.href}">${album.title}</a>`).join("")}
-            </div>
-          </div>
-          ${navItem("projetos.html", "Projetos", ["projetos"])}
-          ${navItem("orcamento.html", "Orçamento", ["orcamento"])}
-          ${navItem("contato.html", "Contato", ["contato"])}
+          ${navButton("Criar página", "nav-cta")}
+          ${navButton("Conta")}
         </nav>
       </div>
     `;
@@ -358,6 +352,7 @@ const renderPhotographerCards = () => {
   const selectedId = params.get("fotografo");
   const publicPhotographers = appState.photographers.filter((item) => item.published);
   const directoryGalleries = document.querySelectorAll("[data-photographer-directory]");
+  document.body.classList.toggle("photographer-site-view", currentSlug() === "portfolio" && Boolean(selectedId));
 
   directoryGalleries.forEach((gallery) => renderDirectory(gallery, publicPhotographers));
 
@@ -390,42 +385,140 @@ const renderPhotographerDetail = (gallery, photographer) => {
 
   const photos = Array.isArray(photographer.photos) ? photographer.photos : [];
   const categories = Array.isArray(photographer.categories) ? photographer.categories.filter(Boolean) : [];
+  const services = categories.length ? categories : ["Ensaios fotograficos", "Portfolio profissional", "Atendimento personalizado"];
   const coverUrl = photographer.coverUrl || photos[0]?.url || "assets/marilopes/empresarial.jpg";
   const instagram = instagramUrl(photographer.instagram);
   const whatsapp = whatsappUrl(photographer.whatsapp);
-  const header = document.createElement("article");
-  header.className = "photographer-profile-hero";
-  header.innerHTML = `
-    <a class="profile-back" href="portfolio.html">Voltar aos fotógrafos</a>
-    <div class="profile-cover">
-      <img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(photographer.displayName || "Fotógrafo")}" loading="eager" />
-    </div>
-    <div class="profile-summary">
-      <span>Portfólio de fotografia</span>
-      <h2>${escapeHtml(photographer.displayName || "Fotógrafo")}</h2>
-      <p>${escapeHtml(photographer.bio || "Conheça o estilo, os ensaios e os contatos deste fotógrafo.")}</p>
-      <div class="profile-tags">
-        ${photographer.city ? `<span>${escapeHtml(photographer.city)}</span>` : ""}
-        ${categories.map((category) => `<span>${escapeHtml(category)}</span>`).join("")}
+  const publicEmail = cleanText(photographer.publicEmail);
+  const displayName = photographer.displayName || "Fotógrafo";
+  const headline = photographer.headline || photographer.bio || "Portfolio fotografico com ensaios, projetos e contatos profissionais.";
+  const site = document.createElement("article");
+  site.className = "photographer-site";
+  site.innerHTML = `
+    <header class="photographer-site-header">
+      <a class="photographer-site-brand" href="#inicio">
+        <strong>${escapeHtml(displayName)}</strong>
+        <span>${escapeHtml(photographer.city || "Portfólio fotográfico")}</span>
+      </a>
+      <nav aria-label="Portfolio de ${escapeHtml(displayName)}">
+        <a href="#inicio">Início</a>
+        <a href="#portfolio">Portfólio</a>
+        <a href="#servicos">Projetos</a>
+        <a href="#orcamento">Orçamento</a>
+        <a href="#contato">Contato</a>
+      </nav>
+      <a class="profile-back" href="portfolio.html">Voltar aos fotógrafos</a>
+    </header>
+
+    <section class="photographer-site-hero" id="inicio">
+      <img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(displayName)}" loading="eager" />
+      <div>
+        <span>Portfólio de fotografia</span>
+        <h1>${escapeHtml(displayName)}</h1>
+        <p>${escapeHtml(headline)}</p>
+        <div class="profile-tags">
+          ${photographer.city ? `<span>${escapeHtml(photographer.city)}</span>` : ""}
+          ${categories.map((category) => `<span>${escapeHtml(category)}</span>`).join("")}
+        </div>
+        <div class="profile-links">
+          ${whatsapp ? `<a href="#orcamento">Pedir orçamento</a>` : ""}
+          ${whatsapp ? `<a href="${escapeHtml(whatsapp)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ""}
+          ${instagram ? `<a href="${escapeHtml(instagram)}" target="_blank" rel="noopener noreferrer">Instagram</a>` : ""}
+        </div>
       </div>
-      <div class="profile-links">
+    </section>
+
+    <section class="photographer-site-section" id="portfolio">
+      <div class="photographer-section-head">
+        <span>Portfólio</span>
+        <h2>Galeria de trabalhos</h2>
+        <p>Uma seleção das fotos publicadas por ${escapeHtml(displayName)}.</p>
+      </div>
+      <div class="photographer-site-gallery">
+        ${photos.length ? photos.map((photo) => `
+          <figure>
+            <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.title || displayName || "Foto")}" loading="lazy" />
+            ${photo.title ? `<figcaption>${escapeHtml(photo.title)}</figcaption>` : ""}
+          </figure>
+        `).join("") : `<p class="mock-empty">Este fotógrafo ainda não publicou fotos.</p>`}
+      </div>
+    </section>
+
+    <section class="photographer-site-section" id="servicos">
+      <div class="photographer-section-head">
+        <span>Projetos e serviços</span>
+        <h2>Especialidades do fotógrafo</h2>
+        <p>Estas categorias ajudam clientes a entenderem o tipo de trabalho oferecido.</p>
+      </div>
+      <div class="service-grid">
+        ${services.map((service, index) => `
+          <article>
+            <span>${String(index + 1).padStart(2, "0")}</span>
+            <h3>${escapeHtml(service)}</h3>
+            <p>Projeto fotográfico com direção, cuidado visual e entrega em página de portfólio.</p>
+          </article>
+        `).join("")}
+      </div>
+    </section>
+
+    <section class="photographer-site-section photographer-budget" id="orcamento">
+      <div class="photographer-section-head">
+        <span>Orçamento</span>
+        <h2>Solicite uma proposta</h2>
+        <p>Envie uma mensagem direta para o contato do fotógrafo com as informações principais.</p>
+      </div>
+      ${whatsapp ? `
+        <form class="quote-form" data-profile-budget>
+          <label>Nome<input name="nome" required placeholder="Seu nome" /></label>
+          <label>WhatsApp<input name="telefone" placeholder="Seu WhatsApp" /></label>
+          <label>Tipo de ensaio/serviço<input name="segmento" placeholder="${escapeHtml(services[0] || "Ensaio fotográfico")}" /></label>
+          <label>Data desejada<input name="data" type="date" /></label>
+          <label class="wide">Mensagem<textarea name="mensagem" rows="4" placeholder="Conte um pouco sobre o que você precisa"></textarea></label>
+          <button class="form-button" type="submit">Enviar pelo WhatsApp</button>
+        </form>
+      ` : `<p class="mock-empty">Este fotógrafo ainda não adicionou WhatsApp para orçamentos.</p>`}
+    </section>
+
+    <section class="photographer-site-section" id="contato">
+      <div class="photographer-section-head">
+        <span>Contato</span>
+        <h2>Fale com ${escapeHtml(displayName)}</h2>
+        <p>Use os canais publicados pelo fotografo para conversar sobre datas, projetos e disponibilidade.</p>
+      </div>
+      <div class="contact-links photographer-contact-links">
         ${whatsapp ? `<a href="${escapeHtml(whatsapp)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ""}
         ${instagram ? `<a href="${escapeHtml(instagram)}" target="_blank" rel="noopener noreferrer">Instagram</a>` : ""}
+        ${publicEmail ? `<a href="mailto:${escapeHtml(publicEmail)}">${escapeHtml(publicEmail)}</a>` : ""}
+        ${photographer.city ? `<span>${escapeHtml(photographer.city)}</span>` : ""}
       </div>
-    </div>
+    </section>
+
+    <footer class="photographer-site-footer">
+      <span>${escapeHtml(displayName)}</span>
+      <a href="portfolio.html">Ver outros fotografos</a>
+    </footer>
   `;
 
-  const nodes = photos.map((photo) => {
-    const figure = document.createElement("figure");
-    figure.className = "photographer-photo";
-    figure.innerHTML = `
-      <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.title || photographer.displayName || "Foto")}" loading="lazy" />
-      ${photo.title ? `<figcaption>${escapeHtml(photo.title)}</figcaption>` : ""}
-    `;
-    return figure;
-  });
+  const budgetForm = site.querySelector("[data-profile-budget]");
+  if (budgetForm && whatsapp) {
+    budgetForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const formData = new FormData(budgetForm);
+      const message = [
+        `Ola, ${displayName}! Gostaria de solicitar um orcamento.`,
+        "",
+        `Nome: ${formData.get("nome") || ""}`,
+        `WhatsApp: ${formData.get("telefone") || ""}`,
+        `Servico: ${formData.get("segmento") || ""}`,
+        `Data desejada: ${formData.get("data") || "A definir"}`,
+        `Mensagem: ${formData.get("mensagem") || ""}`,
+      ].join("\n");
 
-  gallery.replaceChildren(header, ...(nodes.length ? nodes : [emptyState("Este fotógrafo ainda não publicou fotos.")]));
+      window.open(`${whatsapp}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+    });
+  }
+
+  gallery.replaceChildren(site);
 };
 
 const initializeBudgetForm = () => {
@@ -552,8 +645,10 @@ const saveDirectoryProfile = async (uid, profile) => {
     displayName: profile.displayName || "",
     city: profile.city || "",
     bio: profile.bio || "",
+    headline: profile.headline || "",
     whatsapp: profile.whatsapp || "",
     instagram: profile.instagram || "",
+    publicEmail: profile.publicEmail || "",
     categories: Array.isArray(profile.categories) ? profile.categories : [],
     coverUrl: profile.coverUrl || "",
     photos: Array.isArray(profile.photos) ? profile.photos : [],
@@ -598,8 +693,10 @@ const readOwnProfile = async (user) => {
           displayName: appState.profile.name || "",
           city: "",
           bio: "",
+          headline: "",
           whatsapp: "",
           instagram: "",
+          publicEmail: "",
           coverUrl: "",
           categories: [],
           photos: [],
@@ -627,8 +724,10 @@ const createDefaultProfile = async (user) => {
           displayName: profile.name,
           city: "",
           bio: "",
+          headline: "",
           whatsapp: "",
           instagram: "",
+          publicEmail: "",
           coverUrl: "",
           categories: [],
           photos: [],
@@ -661,8 +760,10 @@ const savePhotographerProfile = async (form) => {
     displayName: cleanText(formData.get("displayName")),
     city: cleanText(formData.get("city")),
     bio: cleanText(formData.get("bio")),
+    headline: cleanText(formData.get("headline")),
     whatsapp: cleanText(formData.get("whatsapp")),
     instagram: cleanText(formData.get("instagram")),
+    publicEmail: cleanText(formData.get("publicEmail")),
     coverUrl: cleanText(formData.get("coverUrl")),
     categories: splitList(formData.get("categories")),
     published: formData.get("published") === "on",
@@ -834,9 +935,11 @@ const renderDashboard = (root, message = "") => {
           <div class="account-fields">
             <label>Nome público<input name="displayName" value="${escapeHtml(photographer.displayName || profile.name || "")}" required /></label>
             <label>Cidade<input name="city" value="${escapeHtml(photographer.city || "")}" placeholder="Manaus - AM" /></label>
+            <label class="wide">Frase de destaque<input name="headline" value="${escapeHtml(photographer.headline || "")}" placeholder="Fotografia leve para contar historias reais" /></label>
             <label class="wide">Bio<textarea name="bio" rows="4" placeholder="Fale sobre seu estilo, atendimento e tipos de ensaio">${escapeHtml(photographer.bio || "")}</textarea></label>
             <label>WhatsApp<input name="whatsapp" value="${escapeHtml(photographer.whatsapp || "")}" placeholder="5592999999999" /></label>
             <label>Instagram<input name="instagram" value="${escapeHtml(photographer.instagram || "")}" placeholder="@seuperfil ou https://instagram.com/seuperfil" /></label>
+            <label>Email público<input name="publicEmail" type="email" value="${escapeHtml(photographer.publicEmail || "")}" placeholder="contato@seudominio.com" /></label>
             <label>Categorias<input name="categories" value="${escapeHtml((photographer.categories || []).join(", "))}" placeholder="Casamento, gestante, eventos" /></label>
             <label class="wide">Foto de capa por URL<input name="coverUrl" value="${escapeHtml(photographer.coverUrl || "")}" placeholder="https://..." /></label>
           </div>
