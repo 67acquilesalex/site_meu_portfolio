@@ -371,7 +371,428 @@ Ordem recomendada para os proximos trabalhos:
 8. Depois pensar em upload direto, albuns e link personalizado.
 
 -------------------------------------------------------------------------------
-11. RESUMO
+11. MELHORIAS DE CODIGO IDENTIFICADAS
+-------------------------------------------------------------------------------
+
+O codigo atual funciona para um MVP, mas ja esta no ponto em que precisa ser
+organizado para crescer com seguranca.
+
+Principais melhorias tecnicas:
+
+1. Separar o arquivo script.js em modulos
+   Hoje o script.js concentra quase tudo:
+   - Layout publico.
+   - Renderizacao de portfolio.
+   - Area de conta.
+   - Firebase.
+   - Formularios.
+   - Utilitarios.
+
+   Melhor separar em arquivos menores:
+   - config.js
+   - firebase-service.js
+   - public-render.js
+   - account-editor.js
+   - forms.js
+   - utils.js
+
+   Isso facilita manutencao, testes e novas funcionalidades.
+
+2. Melhorar o modelo do diretorio publico
+   Hoje a vitrine publica usa um documento com array de fotografos em
+   platform/directory. Isso funciona no comeco, mas pode gerar conflito quando
+   muitos fotografos salvarem ao mesmo tempo.
+
+   Modelo melhor:
+   - publicPhotographers/{uid}
+
+   Ou consultar photographers com:
+   - published == true
+
+   Assim cada fotografo atualiza apenas o proprio documento.
+
+3. Remover codigo legado
+   Existe funcao antiga como renderLegacyDashboard. Se nao estiver sendo usada,
+   deve ser removida para reduzir confusao e risco de mexer no lugar errado.
+
+4. Validar melhor os dados antes de salvar
+   Antes de salvar no Firestore, validar:
+   - URL de foto.
+   - URL de capa.
+   - Instagram.
+   - WhatsApp.
+   - E-mail publico.
+   - Cor principal.
+
+   O escape de HTML ajuda na seguranca da renderizacao, mas ainda e importante
+   evitar dados quebrados ou formatos invalidos.
+
+5. Unificar identidade do site
+   Algumas paginas ainda usam "Mari Lopes Fotografia", enquanto a home ja usa
+   "Portfolios Fotograficos". Decidir se o produto e:
+   - Um portfolio individual.
+   - Uma plataforma de portfolios.
+
+   Pela evolucao atual, o caminho mais coerente e plataforma.
+
+6. Melhorar SEO basico
+   Varias paginas ainda precisam de:
+   - Meta description.
+   - og:title.
+   - og:description.
+   - og:image.
+   - canonical.
+   - Titulos consistentes.
+
+   Isso melhora compartilhamento no WhatsApp, Instagram, Google e redes sociais.
+
+-------------------------------------------------------------------------------
+12. FUNCIONALIDADES QUE VALE ADICIONAR NO SITE
+-------------------------------------------------------------------------------
+
+Depois da organizacao do codigo, as melhores funcionalidades para adicionar sao
+as que ajudam o fotografo a publicar melhor e vender melhor.
+
+1. Upload real de imagens
+   Hoje as fotos entram por URL. Para fotografos comuns, isso e uma barreira.
+   O ideal e permitir upload direto, com:
+   - Envio de imagem.
+   - Previa antes de salvar.
+   - Remocao de imagem.
+   - Controle de capa.
+   - Futuramente compressao e tamanhos responsivos.
+
+2. Reordenar fotos, servicos e secoes
+   O modelo ja tem campos de ordem, mas a interface pode melhorar.
+
+   Adicionar:
+   - Arrastar e soltar fotos.
+   - Arrastar e soltar servicos.
+   - Arrastar e soltar secoes da pagina.
+
+3. Lightbox na galeria
+   Ao clicar em uma foto, abrir versao grande com:
+   - Proxima foto.
+   - Foto anterior.
+   - Fechar.
+   - Navegacao por teclado.
+   - Suporte bom no celular.
+
+4. Filtros na vitrine de fotografos
+   A home e a pagina de fotografos podem permitir buscar por:
+   - Cidade.
+   - Categoria.
+   - Tipo de ensaio.
+   - Nome do fotografo.
+
+5. Link publico bonito
+   Trocar links como:
+   - portfolio.html?fotografo=UID
+
+   Por algo mais amigavel no futuro:
+   - /maria-lopes
+   - /fotografos/maria-lopes
+
+   Mesmo que isso exija ajuste posterior na hospedagem ou migracao para
+   Next.js, ja vale planejar o campo slug.
+
+6. Depoimentos de clientes
+   Adicionar bloco editavel com:
+   - Nome do cliente.
+   - Texto do depoimento.
+   - Tipo de ensaio.
+   - Visivel ou oculto.
+
+7. Perguntas frequentes
+   Bloco simples para reduzir duvidas antes do orcamento:
+   - Prazo de entrega.
+   - Como funciona o pagamento.
+   - Quantas fotos sao entregues.
+   - O que acontece se chover.
+   - Local do ensaio.
+
+8. Pacotes ou servicos com preco a partir de
+   O fotografo pode cadastrar servicos com:
+   - Nome.
+   - Descricao.
+   - Preco inicial opcional.
+   - Foto opcional.
+   - Botao para pedir orcamento.
+
+9. Salvar pedidos de orcamento no Firestore
+   Hoje o formulario abre WhatsApp. Isso e bom, mas tambem vale salvar o lead:
+   - Nome.
+   - Telefone.
+   - E-mail.
+   - Tipo de ensaio.
+   - Data desejada.
+   - Mensagem.
+   - Data de envio.
+
+   Assim o fotografo nao perde contato se a conversa no WhatsApp falhar.
+
+10. Preview antes de publicar
+   Antes de publicar, mostrar uma previa clara da pagina final:
+   - Desktop.
+   - Mobile.
+   - Link de preview.
+
+-------------------------------------------------------------------------------
+13. CAIXA DE ENTRADA, CONVERSAS E NOTIFICACOES
+-------------------------------------------------------------------------------
+
+Uma melhoria muito boa para a plataforma e criar uma caixa de entrada para o
+fotografo receber contatos e responder clientes dentro do proprio site.
+
+A ideia nao deve ser criar um chat complexo logo no inicio. O melhor caminho e:
+
+- Todo pedido de orcamento vira uma conversa.
+- Toda mensagem enviada pelo cliente aparece na caixa de entrada do fotografo.
+- O fotografo pode responder pelo site.
+- O fotografo tambem pode abrir a conversa no WhatsApp quando preferir.
+
+Experiencia para o cliente:
+
+- No perfil publico do fotografo, adicionar botao "Enviar mensagem".
+- O cliente preenche:
+  - Nome.
+  - WhatsApp.
+  - E-mail opcional.
+  - Tipo de ensaio ou assunto.
+  - Mensagem.
+
+- Depois de enviar, o cliente ve uma tela simples confirmando a mensagem.
+- Se existir conversa publica por link, o cliente pode acompanhar respostas.
+- No inicio, o cliente nao deve precisar criar conta.
+
+Experiencia para o fotografo:
+
+- Na area Conta, adicionar uma aba "Caixa de entrada".
+- Mostrar contador de mensagens novas.
+- Cada conversa aparece como um card com:
+  - Nome do cliente.
+  - Assunto ou tipo de ensaio.
+  - Ultima mensagem.
+  - Data da ultima mensagem.
+  - Status: novo, respondido ou arquivado.
+
+Ao abrir uma conversa:
+
+- Mostrar historico de mensagens.
+- Campo para responder.
+- Botao "Abrir no WhatsApp".
+- Botao "Arquivar".
+- Indicador de mensagem nao lida.
+
+Notificacoes dentro do site:
+
+- Bolinha ou badge no botao Conta.
+- Contador como "3 novas".
+- Destaque visual em conversas novas.
+- Aba Caixa de entrada com contador.
+
+Push notification do navegador pode ficar para depois. Primeiro, o importante e
+o fotografo nao perder nenhum contato dentro do site.
+
+Modelo de dados recomendado:
+
+Colecao conversations:
+
+- id
+- photographerId
+- clientName
+- clientWhatsapp
+- clientEmail
+- subject
+- status: new | open | archived
+- lastMessage
+- lastMessageAt
+- unreadByPhotographer
+- unreadByClient
+- createdAt
+- updatedAt
+
+Subcolecao conversations/{conversationId}/messages:
+
+- id
+- senderType: client | photographer
+- text
+- createdAt
+- readAt
+
+Regra de produto:
+Chamar isso de "Caixa de entrada" ou "Mensagens", nao de chat. Para fotografos,
+isso soa mais profissional e combina melhor com atendimento.
+
+-------------------------------------------------------------------------------
+14. MELHORIA DO BOTAO CONTA
+-------------------------------------------------------------------------------
+
+O botao Conta pode ficar mais claro e mais util. Hoje ele e generico, mas pode
+virar a entrada principal para o fotografo administrar a pagina.
+
+Com visitante deslogado:
+
+- Mostrar "Entrar".
+- Mostrar "Criar minha pagina" como chamada principal.
+
+Com fotografo logado:
+
+- Trocar "Conta" por "Minha pagina".
+- Mostrar inicial ou avatar simples.
+- Mostrar badge de mensagens novas quando existir caixa de entrada.
+
+Ao clicar em "Minha pagina", abrir um menu curto:
+
+- Editar minha pagina.
+- Caixa de entrada.
+- Ver pagina publica.
+- Copiar link.
+- Sair.
+
+Essa mudanca deixa claro que a conta nao e apenas login. Ela vira uma central
+rapida para o fotografo editar, acompanhar mensagens e acessar a pagina publica.
+
+-------------------------------------------------------------------------------
+15. REPAGINADA DA INTERFACE INICIAL
+-------------------------------------------------------------------------------
+
+A home deve ficar mais direta para dois publicos:
+
+1. Clientes procurando fotografos.
+2. Fotografos querendo criar a propria pagina.
+
+O topo da pagina deve deixar isso claro.
+
+Estrutura recomendada da home:
+
+Header:
+
+- Logo.
+- Encontrar fotografos.
+- Como funciona.
+- Criar minha pagina.
+- Entrar ou Minha pagina.
+
+Hero:
+
+- Titulo forte:
+  "Encontre fotografos para seu ensaio"
+
+- Texto curto:
+  "Veja portfolios reais, filtre por cidade ou estilo e fale direto com o
+  profissional ideal."
+
+- Barra de pesquisa grande.
+- Filtros rapidos por categoria.
+
+Busca:
+
+- Campo unico para buscar por:
+  - Nome do fotografo.
+  - Cidade.
+  - Categoria.
+  - Tipo de ensaio.
+
+- Botao "Buscar".
+- Botao ou link "Limpar busca".
+
+Filtros rapidos:
+
+- Familia.
+- Gestante.
+- Casal.
+- Eventos.
+- Empresarial.
+- Imoveis.
+
+Vitrine de fotografos:
+
+- Cards maiores e mais visuais.
+- Foto de capa.
+- Nome.
+- Cidade.
+- Categorias.
+- Pequena bio.
+- Botao "Ver portfolio".
+- Futuramente botao "Enviar mensagem".
+
+Estado vazio:
+
+Se nenhuma busca encontrar resultado, mostrar:
+
+- "Nenhum fotografo encontrado."
+- Botao "Limpar busca".
+- Chamada secundaria "E fotografo? Crie sua pagina."
+
+Faixa para fotografos:
+
+Depois da vitrine, adicionar uma chamada menor:
+
+"E fotografo? Crie sua pagina, publique seu portfolio e receba pedidos de
+orcamento em um so lugar."
+
+Botoes:
+
+- Criar minha pagina.
+- Ver como funciona.
+
+Objetivo visual:
+
+- Menos texto explicando a plataforma.
+- Mais foco na busca e nos fotografos publicados.
+- Cards mais fortes.
+- Interface inicial parecida com uma vitrine profissional.
+
+-------------------------------------------------------------------------------
+16. BARRA DE PESQUISA DE FOTOGRAFOS
+-------------------------------------------------------------------------------
+
+A primeira versao da busca pode ser simples, usando os dados ja carregados em
+appState.photographers.
+
+Campos usados na busca:
+
+- displayName
+- city
+- categories
+- bio
+- services
+
+Comportamento:
+
+- O usuario digita na barra de pesquisa.
+- Os cards filtram na propria pagina.
+- Clicar em uma categoria preenche/aplica o filtro.
+- O resultado deve atualizar sem recarregar a pagina.
+
+Essa busca pode comecar no frontend. Mais tarde, quando tiver muitos fotografos,
+pode virar uma consulta otimizada no Firestore.
+
+-------------------------------------------------------------------------------
+17. PRIORIDADE REVISADA
+-------------------------------------------------------------------------------
+
+Ordem mais forte para evoluir o projeto:
+
+1. Modularizar o script.js em arquivos menores.
+2. Ajustar o modelo do Firestore para evitar array unico no diretorio publico.
+3. Remover codigo legado e padronizar nomes/textos da plataforma.
+4. Melhorar validacoes de URL, WhatsApp, Instagram, e-mail e cor.
+5. Adicionar SEO basico nas paginas principais.
+6. Melhorar header, botao Conta e estado logado/deslogado.
+7. Repaginar a home com hero focado em busca de fotografos.
+8. Adicionar barra de pesquisa e filtros na vitrine.
+9. Implementar upload real de imagens.
+10. Implementar reordenacao de fotos, servicos e secoes.
+11. Adicionar lightbox na galeria.
+12. Salvar pedidos de orcamento como leads no Firestore.
+13. Criar Caixa de entrada com mensagens e notificacoes internas.
+14. Planejar link publico bonito com slug.
+15. Adicionar depoimentos, FAQ e pacotes.
+
+-------------------------------------------------------------------------------
+18. RESUMO
 -------------------------------------------------------------------------------
 
 A melhor melhoria agora e transformar a conta em um editor de pagina.
