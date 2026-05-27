@@ -1,131 +1,182 @@
 ===============================================================================
-PASSO A PASSO ATUALIZADO - PLATAFORMA DE PAGINAS PARA FOTOGRAFOS
+PASSO A PASSO ATUALIZADO - PLATAFORMA DE PORTFOLIOS PARA FOTOGRAFOS
 ===============================================================================
 
-Ideia principal:
-O site deve deixar de parecer apenas o portfolio de uma fotografa e virar uma
-plataforma onde varios fotografos criam suas proprias paginas publicas.
+Visao atual:
+O site esta virando uma plataforma onde fotografos criam paginas proprias para
+mostrar o trabalho. A home e a pagina "Fotografos" ja estao indo para a direcao
+certa: elas devem apresentar a plataforma e listar os perfis publicados.
 
-Cada fotografo tera uma pagina para mostrar seu trabalho, sua bio, sua cidade,
-suas categorias, seus contatos e suas fotos. A pagina inicial da plataforma deve
-mostrar os perfis dos fotografos publicados.
-
-As fotos atuais usadas no site podem continuar como imagens de teste enquanto o
-produto esta sendo montado. Elas nao devem definir a identidade final da
-plataforma.
+Agora a prioridade deve ser melhorar a pagina individual de cada fotografo.
+Ela precisa se parecer mais com um site/portfolio proprio do fotografo, como a
+referencia visual da Mari Lopes, com navegacao, fotos grandes, secoes e contato.
 
 -------------------------------------------------------------------------------
-1. DIRECAO CORRETA DO SITE
+1. DIVISAO CORRETA ENTRE PLATAFORMA E PAGINA DO FOTOGRAFO
 -------------------------------------------------------------------------------
 
-O site tera duas experiencias principais:
+A plataforma e a pagina do fotografo devem ter responsabilidades diferentes.
 
-1. Pagina inicial da plataforma
-   - Mostra perfis/cards de fotografos publicados.
-   - Ajuda visitantes a encontrar profissionais.
-   - Pode ter chamada para fotografos criarem sua pagina.
-   - Nao deve ser apenas uma galeria de fotos da Mari Lopes.
+HOME DA PLATAFORMA:
+- Explica o que e a plataforma.
+- Mostra cards/perfis de fotografos publicados.
+- Tem chamada para criar uma pagina.
+- Pode ter busca e filtros futuramente.
+- Nao deve carregar menus como Projetos, Orcamento e Contato de um fotografo
+  especifico.
 
-2. Pagina publica de cada fotografo
-   - Deve parecer um portfolio profissional individual.
-   - Pode ter um visual parecido com a galeria atual: fotos grandes, limpas e
-     bem valorizadas.
-   - Deve mostrar nome do fotografo, cidade, bio, categorias e contatos.
-   - Deve ter link proprio para o fotografo compartilhar com clientes.
+PAGINA "FOTOGRAFOS":
+- Lista os perfis publicados.
+- Serve para visitantes explorarem profissionais.
+- Pode ter filtros por cidade/categoria no futuro.
+
+PAGINA INDIVIDUAL DO FOTOGRAFO:
+- E o portfolio real do profissional.
+- Deve ter visual parecido com um site pessoal.
+- Deve conter as secoes do fotografo: Portfolio, Projetos/Servicos, Orcamento e
+  Contato.
+- Deve ser a pagina que o fotografo compartilha com clientes.
 
 Resumo:
-- Home = vitrine de fotografos.
-- Pagina do fotografo = portfolio do fotografo.
-- Conta = local onde o fotografo monta e publica a propria pagina.
+- Home = plataforma.
+- Fotografos = diretorio/lista.
+- Pagina do fotografo = site pessoal/portfolio do fotografo.
 
 -------------------------------------------------------------------------------
-2. COMO A HOME DEVE FUNCIONAR
+2. O QUE A HOME DEVE MANTER
 -------------------------------------------------------------------------------
 
-A pagina inicial deve apresentar a plataforma e listar fotografos publicados.
+O que ja ficou bom:
+- Hero explicando a plataforma.
+- Botao para ver fotografos.
+- Botao para criar pagina.
+- Cards de fotografos publicados.
+- Identidade mais neutra, sem parecer apenas site da Mari Lopes.
 
-Elementos recomendados:
-- Cabecalho com nome/logo da plataforma.
-- Chamada clara: "Encontre fotografos e conheca seus portfolios".
-- Botao para fotografos: "Criar minha pagina".
-- Cards de fotografos com:
-  - foto de capa;
-  - nome publico;
-  - cidade;
-  - categorias;
-  - pequena descricao;
-  - botao/link para ver o portfolio.
+Melhorias futuras para a home:
+- Melhorar foto de fundo para representar a plataforma, nao uma unica fotografa.
+- Adicionar pequeno texto "Para fotografos" e "Para clientes".
+- Adicionar filtros ou busca quando houver mais perfis.
+- Mostrar mais perfis em destaque.
+- Adicionar chamada no final: "Crie sua pagina de portfolio".
 
-Quando nao houver fotografos publicados:
-- Mostrar uma mensagem simples.
-- Mostrar fotos de exemplo apenas como demonstracao.
-- Incentivar o primeiro fotografo a criar uma pagina.
-
-Depois:
-- Adicionar filtro por cidade.
-- Adicionar filtro por categoria.
-- Adicionar busca por nome.
+O que remover/evitar na home:
+- Links de Orcamento e Contato que pertencem a um fotografo especifico.
+- Projetos/Servicos de um fotografo especifico.
+- Textos que parecam venda de ensaio de uma unica profissional.
 
 -------------------------------------------------------------------------------
-3. COMO A PAGINA DO FOTOGRAFO DEVE SER
+3. MENU DA PLATAFORMA
 -------------------------------------------------------------------------------
 
-Esta e a pagina mais importante para o fotografo.
+O menu principal da plataforma deve ser simples.
 
-Ela deve ser bonita o suficiente para ele compartilhar com clientes sem precisar
-de outro site.
+Sugestao para o menu da plataforma:
+- Home
+- Fotografos
+- Criar pagina
+- Entrar/Conta
+
+Itens como:
+- Servicos
+- Projetos
+- Orcamento
+- Contato
+
+devem sair do menu global da plataforma e entrar na pagina individual de cada
+fotografo.
+
+Motivo:
+Esses itens fazem sentido quando o visitante esta vendo um fotografo especifico.
+Na plataforma, ainda nao existe um profissional escolhido.
+
+-------------------------------------------------------------------------------
+4. COMO DEVE SER A PAGINA INDIVIDUAL DO FOTOGRAFO
+-------------------------------------------------------------------------------
+
+Essa deve ser a parte mais bonita do produto.
+
+A pagina individual deve parecer um site pessoal do fotografo, mais ou menos
+como a referencia visual enviada:
+- Logo/nome do fotografo no topo.
+- Menu interno do fotografo.
+- Hero ou frase visual.
+- Galeria com fotos grandes.
+- Secao de projetos/servicos.
+- Secao de orcamento.
+- Secao de contato.
 
 Estrutura recomendada:
 
-1. Topo do portfolio
-   - Nome do fotografo em destaque.
+1. Header do fotografo
+   - Nome ou logo do fotografo.
+   - Menu interno:
+     - Inicio
+     - Portfolio
+     - Projetos/Servicos
+     - Orcamento
+     - Contato
+   - Esses links rolam para secoes da mesma pagina.
+
+2. Hero do fotografo
+   - Foto de capa ou foto principal.
+   - Nome do fotografo.
    - Cidade.
-   - Categorias/especialidades.
    - Bio curta.
-   - Botao de WhatsApp.
-   - Botao de Instagram.
-   - Foto de capa ou uma foto principal.
+   - Botao "Pedir orcamento".
+   - Botao "WhatsApp" ou "Instagram".
 
-2. Galeria
-   - Fotos grandes.
-   - Layout limpo, parecido com portfolio visual.
-   - Pode usar grid estilo editorial/masonry no futuro.
-   - Titulo da foto aparece somente quando for util.
+3. Portfolio
+   - Galeria visual com fotos grandes.
+   - Layout parecido com portfolio real.
+   - Fotos organizadas com respiro.
+   - No futuro: albuns/categorias dentro do portfolio.
 
-3. Rodape da pagina do fotografo
-   - Contatos.
-   - Link para voltar para a plataforma.
-   - Texto pequeno indicando que a pagina foi criada na plataforma.
+4. Projetos/Servicos
+   - Lista de tipos de ensaio ou servicos do fotografo.
+   - Exemplo: Casamento, gestante, familia, eventos, imoveis, editorial.
+   - No inicio pode usar as categorias preenchidas no perfil.
+   - Futuramente o fotografo podera criar seus proprios projetos/servicos.
 
-Importante:
-- A pagina do fotografo nao deve parecer a home da plataforma.
-- A pagina do fotografo tambem nao deve ficar presa a identidade "Mari Lopes".
-- O foco deve ser o profissional logado e as fotos que ele publicou.
+5. Orcamento
+   - Formulario simples ou botao que envia mensagem para o WhatsApp.
+   - Campos recomendados:
+     - Nome
+     - WhatsApp
+     - Tipo de ensaio/servico
+     - Data desejada
+     - Mensagem
+   - A mensagem deve ir para o WhatsApp do fotografo dono da pagina.
+
+6. Contato
+   - WhatsApp.
+   - Instagram.
+   - Cidade.
+   - E-mail, se futuramente for adicionado ao perfil.
+
+7. Rodape
+   - Nome do fotografo.
+   - Link discreto: "Pagina criada na plataforma".
+   - Link para voltar para a lista de fotografos.
 
 -------------------------------------------------------------------------------
-4. AREA DE CONTA - REDESENHO NECESSARIO
+5. AREA DE CONTA - PROXIMA MELHORIA VISUAL
 -------------------------------------------------------------------------------
 
-A area de conta atual funciona, mas visualmente esta pesada e feia. Ela precisa
-parecer um editor simples de portfolio, nao um formulario bruto.
+A area de conta melhorou na organizacao, mas ainda pode ficar mais bonita.
 
-Objetivo da area de conta:
-Dar ao fotografo uma forma facil de montar a pagina publica.
+Objetivo:
+Transformar a conta em um editor de pagina, nao em um formulario longo.
 
 Melhorias recomendadas:
 
-1. Organizar por etapas ou abas
+1. Navegacao por abas ou passos
    - Perfil
    - Fotos
+   - Pagina
    - Publicacao
 
-2. Topo da conta
-   - Status: Publicado ou Oculto.
-   - Botao "Ver pagina publica".
-   - Botao "Copiar link".
-   - Pequeno resumo do que falta preencher.
-
-3. Secao Perfil
+2. Perfil
    - Nome publico.
    - Cidade.
    - Bio.
@@ -134,41 +185,30 @@ Melhorias recomendadas:
    - Categorias.
    - Foto de capa.
 
-4. Secao Fotos
-   - Adicionar foto por URL enquanto nao existir upload.
-   - Mostrar miniaturas das fotos adicionadas.
+3. Fotos
+   - Adicionar foto.
+   - Ver miniaturas maiores.
    - Remover foto.
-   - Futuramente: reordenar, ocultar e escolher capa.
+   - Futuramente: arrastar para ordenar, ocultar foto e escolher capa.
 
-5. Secao Publicacao
-   - Checkbox "Publicar meu portfolio".
-   - Explicacao curta:
-     "Quando publicado, seu perfil aparece na pagina inicial e seu link pode ser
-     compartilhado com clientes."
+4. Pagina
+   - Configurar frase de destaque.
+   - Configurar secoes visiveis.
+   - Futuramente: escolher estilo/template.
+
+5. Publicacao
+   - Status publicado/oculto.
+   - Ver pagina publica.
+   - Copiar link.
+   - Explicacao do que acontece quando publica.
 
 Direcao visual:
-- Menos bordas e menos campos amontoados.
-- Campos com espacamento melhor.
-- Botoes mais claros.
-- Modal mais organizado.
-- Possivel painel em tela cheia no futuro, se o modal ficar pequeno demais.
-
--------------------------------------------------------------------------------
-5. FLUXO IDEAL DO FOTOGRAFO
--------------------------------------------------------------------------------
-
-1. Fotografo entra no site.
-2. Clica em Conta.
-3. Cria conta ou entra com Google.
-4. Preenche Perfil.
-5. Adiciona fotos.
-6. Marca "Publicar meu portfolio".
-7. Clica em Salvar.
-8. Clica em "Ver pagina publica".
-9. Copia o link e compartilha com clientes.
-
-Esse fluxo precisa ser simples. O fotografo nao deve precisar entender termos
-tecnicos para publicar a propria pagina.
+- Mais parecido com painel/editor moderno.
+- Menos bordas.
+- Mais espaco entre grupos.
+- Botoes com hierarquia clara.
+- Miniaturas de fotos mais bonitas.
+- Se o modal ficar limitado, transformar a conta em tela/pagina de edicao.
 
 -------------------------------------------------------------------------------
 6. O QUE O CODIGO JA TEM HOJE
@@ -176,156 +216,145 @@ tecnicos para publicar a propria pagina.
 
 O projeto atual ja tem:
 - Site estatico em HTML, CSS e JavaScript.
-- Publicacao na Vercel.
-- Firebase Authentication para login.
-- Firebase Firestore para salvar perfis.
+- Deploy na Vercel.
+- Firebase Authentication.
 - Login com Google funcionando.
 - Cadastro por email/senha funcionando.
-- Recuperacao de senha adicionada.
-- Perfil do fotografo salvo em `photographers/{uid}`.
-- Diretorio publico salvo em `platform/directory`.
-- Campo para publicar ou ocultar portfolio.
+- Recuperacao de senha.
+- Firestore salvando usuarios e perfis.
+- Home com linguagem de plataforma.
+- Pagina "Fotografos" listando perfis publicados.
+- Cards de fotografos com foto, nome, cidade, bio e categoria.
+- Pagina individual por `portfolio.html?fotografo=UID`.
+- Area de conta com secoes de Perfil, Publicacao e Fotos.
 - Botao para copiar link do portfolio.
-- Botao para ver a pagina publica quando publicado.
-- Pagina individual via `portfolio.html?fotografo=UID`.
+- Botao para ver pagina publica quando o perfil esta publicado.
 
 O que ainda precisa melhorar:
-- Home ainda precisa virar vitrine de perfis.
-- Pagina do fotografo precisa ficar mais parecida com um portfolio real.
-- Area de conta precisa ser redesenhada.
-- Fotos ainda sao adicionadas por URL.
-- Ainda nao existe upload direto.
-- Ainda nao existe album, reordenacao ou ocultar foto individual.
+- Remover do menu global os itens que pertencem ao fotografo.
+- Transformar a pagina individual em um site/portfolio completo do fotografo.
+- Levar Projetos/Servicos, Orcamento e Contato para dentro da pagina do fotografo.
+- Melhorar visual da area de conta.
+- Adicionar mais campos para a pagina do fotografo, se necessario.
+- Permitir upload direto no futuro.
 
 -------------------------------------------------------------------------------
-7. PRIORIDADE DE IMPLEMENTACAO
+7. PRIORIDADE DE IMPLEMENTACAO A PARTIR DE AGORA
 -------------------------------------------------------------------------------
 
-Prioridade 1 - Ajustar a estrutura das paginas
-- Transformar a pagina inicial em vitrine de fotografos.
-- Separar melhor a home da plataforma e a pagina individual do fotografo.
-- Remover dependencia visual da marca Mari Lopes na experiencia da plataforma.
+Prioridade 1 - Ajustar navegacao global
+- Menu da plataforma deve ficar simples.
+- Remover do menu global:
+  - Servicos
+  - Projetos
+  - Orcamento
+  - Contato
+- Manter:
+  - Home
+  - Fotografos
+  - Criar pagina/Conta
 
-Prioridade 2 - Melhorar pagina do fotografo
-- Deixar a pagina individual com cara de portfolio profissional.
-- Valorizar fotos grandes.
-- Melhorar topo com nome, bio, cidade, categorias e contato.
-- Garantir que as fotos de teste sejam tratadas apenas como exemplo.
+Prioridade 2 - Criar pagina individual completa do fotografo
+- Header proprio com nome do fotografo.
+- Menu interno do fotografo.
+- Hero com capa, nome, cidade, bio e botoes.
+- Galeria parecida com portfolio real.
+- Secao Projetos/Servicos.
+- Secao Orcamento.
+- Secao Contato.
 
-Prioridade 3 - Melhorar area de conta
-- Trocar o formulario bruto por um editor mais bonito.
-- Criar secoes/abas: Perfil, Fotos, Publicacao.
-- Melhorar miniaturas das fotos.
-- Melhorar botoes e mensagens.
+Prioridade 3 - Adaptar dados do perfil
+- Usar categorias como servicos iniciais.
+- Usar WhatsApp do fotografo no orcamento.
+- Usar Instagram do fotografo no contato.
+- Usar fotos do perfil na galeria.
+- Usar foto de capa como hero.
 
-Prioridade 4 - Melhorias de portfolio
+Prioridade 4 - Melhorar area de conta
+- Separar melhor em abas/passos.
+- Melhorar visual das miniaturas.
+- Adicionar campo de frase de destaque, se necessario.
+- Adicionar campo de e-mail publico, se necessario.
+
+Prioridade 5 - Recursos futuros
+- Upload direto.
+- Albuns.
 - Reordenar fotos.
-- Ocultar foto sem apagar.
-- Escolher foto de capa a partir das fotos enviadas.
-- Separar por albuns.
-- Adicionar upload direto.
-
-Prioridade 5 - Busca e crescimento
-- Filtro por cidade.
-- Filtro por categoria.
-- Busca por nome.
-- Paginas com link mais bonito.
-- Planos pagos no futuro.
+- Ocultar fotos sem apagar.
+- Link personalizado.
+- Filtros por cidade/categoria.
+- Planos pagos.
 
 -------------------------------------------------------------------------------
-8. MODELO DE DADOS RECOMENDADO
+8. MODELO DE DADOS RECOMENDADO PARA A PROXIMA FASE
 -------------------------------------------------------------------------------
 
-Usuario:
-- uid
-- nome
-- email
-- data de criacao
-- tipo interno, se ainda for necessario para regras
-
-Fotografo:
+Perfil do fotografo:
 - uid
 - nome publico
 - cidade
 - bio
+- frase de destaque
 - WhatsApp
 - Instagram
-- categorias
+- e-mail publico, futuramente
+- categorias/servicos
 - foto de capa
 - publicado
 - fotos
-- data de criacao
-- data de atualizacao
+- criado em
+- atualizado em
 
 Foto:
 - url
 - titulo
 - ordem
 - visivel
-- data de criacao
+- capa, se for usada como destaque
 
-Diretorio publico:
-- lista resumida dos fotografos publicados
-- usado pela home e pela lista de perfis
+Servico/Projeto, futuramente:
+- titulo
+- descricao
+- foto
+- ordem
+- visivel
 
 -------------------------------------------------------------------------------
 9. CUIDADOS IMPORTANTES
 -------------------------------------------------------------------------------
 
-1. Identidade
-   A plataforma nao pode parecer que todos os fotografos pertencem a marca
-   Mari Lopes. A marca atual pode ser usada como base visual, mas o produto final
-   precisa parecer uma plataforma aberta para varios profissionais.
+1. Separar plataforma e fotografo
+   A plataforma nao deve parecer um portfolio de uma pessoa. A pagina individual
+   sim deve parecer um portfolio pessoal.
 
-2. Fotos de teste
-   As fotos atuais servem para teste. No produto final, cada pagina deve mostrar
-   as fotos publicadas pelo fotografo dono daquele perfil.
+2. Menus no lugar certo
+   Projetos, orcamento e contato pertencem ao fotografo, nao a plataforma.
 
-3. Login
-   O login ja esta funcionando bem. Evitar mexer nele sem necessidade.
+3. Fotos de teste
+   As fotos atuais podem ser usadas para simular o visual, mas cada pagina deve
+   usar as fotos do fotografo logado.
 
-4. Firebase
-   Senhas ficam apenas no Firebase Authentication.
-   O Firestore deve guardar apenas dados de perfil e portfolio.
+4. Login
+   O login esta funcionando. Evitar mexer nele sem necessidade.
 
 5. Simplicidade
-   Nao criar uma rede social agora. Primeiro fazer bem:
-   - perfil;
-   - fotos;
-   - publicar;
-   - compartilhar.
+   Nao criar rede social agora. Primeiro entregar paginas bonitas e
+   compartilhaveis para fotografos.
 
 -------------------------------------------------------------------------------
-10. O QUE NAO FAZER AGORA
+10. RESUMO DA PROXIMA ETAPA
 -------------------------------------------------------------------------------
 
-Evitar neste momento:
-- Chat interno.
-- Curtidas.
-- Comentarios.
-- Feed infinito.
-- Cadastro obrigatorio para clientes.
-- Sistema de pagamento.
-- Dashboard empresarial complexo.
-- Muitas configuracoes antes do portfolio basico estar bonito.
+A home e a lista de fotografos estao no caminho certo.
 
-Primeiro objetivo:
-O fotografo precisa entrar, montar uma pagina bonita e compartilhar o link.
+Agora o foco deve ser:
+1. Simplificar o menu da plataforma.
+2. Transformar a pagina individual do fotografo em um portfolio completo.
+3. Colocar Projetos/Servicos, Orcamento e Contato dentro da pagina do fotografo.
+4. Melhorar a area de conta para parecer um editor de pagina.
 
--------------------------------------------------------------------------------
-11. RESUMO DA VISAO ATUAL
--------------------------------------------------------------------------------
-
-O site deve virar uma plataforma de portfolios para fotografos.
-
-A home mostra os fotografos.
-A pagina individual mostra o portfolio de cada fotografo.
-A area de conta permite montar e publicar essa pagina.
-
-Essa e a base do produto.
-
-Depois que essa base estiver bonita e funcionando, entram filtros, albuns,
-upload direto, links personalizados e planos pagos.
+Quando isso estiver bom, o produto ja tera a base principal:
+fotografo cria uma pagina, publica fotos, recebe contato e compartilha o link.
 
 ===============================================================================
 FIM DO DOCUMENTO
