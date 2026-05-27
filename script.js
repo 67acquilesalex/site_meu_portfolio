@@ -392,24 +392,13 @@ const renderPhotographerDetail = (gallery, photographer) => {
   const publicEmail = cleanText(photographer.publicEmail);
   const displayName = photographer.displayName || "Fotógrafo";
   const headline = photographer.headline || photographer.bio || "Portfolio fotografico com ensaios, projetos e contatos profissionais.";
-  const site = document.createElement("article");
-  site.className = "photographer-site";
-  site.innerHTML = `
-    <header class="photographer-site-header">
-      <a class="photographer-site-brand" href="#inicio">
-        <strong>${escapeHtml(displayName)}</strong>
-        <span>${escapeHtml(photographer.city || "Portfólio fotográfico")}</span>
-      </a>
-      <nav aria-label="Portfolio de ${escapeHtml(displayName)}">
-        <a href="#inicio">Início</a>
-        <a href="#portfolio">Portfólio</a>
-        <a href="#servicos">Projetos</a>
-        <a href="#orcamento">Orçamento</a>
-        <a href="#contato">Contato</a>
-      </nav>
-      <a class="profile-back" href="portfolio.html">Voltar aos fotógrafos</a>
-    </header>
-
+  const requestedPage = new URLSearchParams(location.search).get("pagina") || "inicio";
+  const activePage = ["inicio", "portfolio", "projetos", "orcamento", "contato"].includes(requestedPage)
+    ? requestedPage
+    : "inicio";
+  const pageHref = (page) => publicProfilePath(photographer.uid, page);
+  const activeClass = (page) => activePage === page ? ' class="active"' : "";
+  const heroSection = `
     <section class="photographer-site-hero" id="inicio">
       <img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(displayName)}" loading="eager" />
       <div>
@@ -421,13 +410,14 @@ const renderPhotographerDetail = (gallery, photographer) => {
           ${categories.map((category) => `<span>${escapeHtml(category)}</span>`).join("")}
         </div>
         <div class="profile-links">
-          ${whatsapp ? `<a href="#orcamento">Pedir orçamento</a>` : ""}
-          ${whatsapp ? `<a href="${escapeHtml(whatsapp)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ""}
+          <a href="${escapeHtml(pageHref("portfolio"))}">Ver portfólio</a>
+          ${whatsapp ? `<a href="${escapeHtml(pageHref("orcamento"))}">Pedir orçamento</a>` : ""}
           ${instagram ? `<a href="${escapeHtml(instagram)}" target="_blank" rel="noopener noreferrer">Instagram</a>` : ""}
         </div>
       </div>
     </section>
-
+  `;
+  const portfolioSection = `
     <section class="photographer-site-section" id="portfolio">
       <div class="photographer-section-head">
         <span>Portfólio</span>
@@ -443,7 +433,8 @@ const renderPhotographerDetail = (gallery, photographer) => {
         `).join("") : `<p class="mock-empty">Este fotógrafo ainda não publicou fotos.</p>`}
       </div>
     </section>
-
+  `;
+  const projectsSection = `
     <section class="photographer-site-section" id="servicos">
       <div class="photographer-section-head">
         <span>Projetos e serviços</span>
@@ -460,7 +451,8 @@ const renderPhotographerDetail = (gallery, photographer) => {
         `).join("")}
       </div>
     </section>
-
+  `;
+  const budgetSection = `
     <section class="photographer-site-section photographer-budget" id="orcamento">
       <div class="photographer-section-head">
         <span>Orçamento</span>
@@ -478,12 +470,13 @@ const renderPhotographerDetail = (gallery, photographer) => {
         </form>
       ` : `<p class="mock-empty">Este fotógrafo ainda não adicionou WhatsApp para orçamentos.</p>`}
     </section>
-
+  `;
+  const contactSection = `
     <section class="photographer-site-section" id="contato">
       <div class="photographer-section-head">
         <span>Contato</span>
         <h2>Fale com ${escapeHtml(displayName)}</h2>
-        <p>Use os canais publicados pelo fotografo para conversar sobre datas, projetos e disponibilidade.</p>
+        <p>Use os canais publicados pelo fotógrafo para conversar sobre datas, projetos e disponibilidade.</p>
       </div>
       <div class="contact-links photographer-contact-links">
         ${whatsapp ? `<a href="${escapeHtml(whatsapp)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ""}
@@ -492,10 +485,36 @@ const renderPhotographerDetail = (gallery, photographer) => {
         ${photographer.city ? `<span>${escapeHtml(photographer.city)}</span>` : ""}
       </div>
     </section>
+  `;
+  const pageSections = {
+    inicio: heroSection,
+    portfolio: portfolioSection,
+    projetos: projectsSection,
+    orcamento: budgetSection,
+    contato: contactSection,
+  };
+  const site = document.createElement("article");
+  site.className = "photographer-site";
+  site.innerHTML = `
+    <header class="photographer-site-header">
+      <a class="photographer-site-brand" href="${escapeHtml(pageHref("inicio"))}">
+        <strong>${escapeHtml(displayName)}</strong>
+        <span>${escapeHtml(photographer.city || "Portfólio fotográfico")}</span>
+      </a>
+      <nav aria-label="Portfolio de ${escapeHtml(displayName)}">
+        <a${activeClass("inicio")} href="${escapeHtml(pageHref("inicio"))}">Início</a>
+        <a${activeClass("portfolio")} href="${escapeHtml(pageHref("portfolio"))}">Portfólio</a>
+        <a${activeClass("projetos")} href="${escapeHtml(pageHref("projetos"))}">Projetos</a>
+        <a${activeClass("orcamento")} href="${escapeHtml(pageHref("orcamento"))}">Orçamento</a>
+        <a${activeClass("contato")} href="${escapeHtml(pageHref("contato"))}">Contato</a>
+      </nav>
+      <a class="profile-back" href="portfolio.html">Voltar aos fotógrafos</a>
+    </header>
+    ${pageSections[activePage]}
 
     <footer class="photographer-site-footer">
       <span>${escapeHtml(displayName)}</span>
-      <a href="portfolio.html">Ver outros fotografos</a>
+      <a href="portfolio.html">Ver outros fotógrafos</a>
     </footer>
   `;
 
@@ -570,10 +589,16 @@ const userDoc = (uid) => appState.modules.firestore.doc(appState.db, "users", ui
 const photographerDoc = (uid) => appState.modules.firestore.doc(appState.db, "photographers", uid);
 const directoryDoc = () => appState.modules.firestore.doc(appState.db, "platform", "directory");
 const timestamp = () => appState.modules.firestore.serverTimestamp();
-const publicProfileUrl = (uid) => {
+const publicProfileUrl = (uid, page = "inicio") => {
   const url = new URL("portfolio.html", location.href);
   url.searchParams.set("fotografo", uid);
+  if (page && page !== "inicio") url.searchParams.set("pagina", page);
   return url.href;
+};
+const publicProfilePath = (uid, page = "inicio") => {
+  const params = new URLSearchParams({ fotografo: uid });
+  if (page && page !== "inicio") params.set("pagina", page);
+  return `portfolio.html?${params.toString()}`;
 };
 const instagramUrl = (value) => {
   const instagram = cleanText(value);

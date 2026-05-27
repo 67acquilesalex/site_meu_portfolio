@@ -958,6 +958,7 @@ body.photographer-site-view .site-footer {
 }
 
 .photographer-site-header nav a:hover,
+.photographer-site-header nav a.active,
 .photographer-site-header .profile-back:hover {
   color: var(--sage-dark);
   background: rgba(104, 116, 95, 0.1);
