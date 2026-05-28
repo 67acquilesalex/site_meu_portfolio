@@ -25,6 +25,12 @@
             Uma vitrine para profissionais mostrarem seu trabalho, publicarem
             fotos e compartilharem uma página própria com clientes.
           </p>
+          <form class="directory-search" data-directory-search-form>
+            <input data-directory-search type="search" placeholder="Buscar por nome, cidade ou categoria" autocomplete="off" />
+            <button type="submit">Buscar</button>
+            <button type="button" data-directory-clear>Limpar</button>
+          </form>
+          <div class="directory-filters" data-directory-filters aria-label="Filtros rápidos"></div>
           <div class="home-actions">
             <a class="text-button light" href="#fotografos">Ver fotógrafos</a>
             <button class="text-button light" type="button" data-open-account>Criar minha página</button>
@@ -53,7 +59,7 @@
       <section class="section-title section-wrap" id="fotografos">
         <span>Fotógrafos publicados</span>
         <h2>Conheça profissionais e seus trabalhos.</h2>
-        <p>Os cards abaixo aparecem quando fotógrafos publicam seus perfis pela área de conta.</p>
+        <p data-directory-count>0 fotógrafos encontrados</p>
       </section>
 
       <section class="portfolio-gallery site-frame" data-photographer-directory aria-label="Fotógrafos publicados"></section>

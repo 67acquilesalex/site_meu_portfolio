@@ -120,6 +120,7 @@ export const EDITOR_TABS = [
   ["servicos", "Servicos"],
   ["orcamento", "Orcamento"],
   ["contato", "Contato"],
+  ["inbox", "Caixa"],
   ["aparencia", "Aparencia"],
   ["publicacao", "Publicacao"],
 ];

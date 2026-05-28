@@ -38,14 +38,16 @@ Depois do deploy, conecte o dominio da Hostinger em `Project Settings > Domains`
 
 ## Plataforma com Firebase
 
-O site usa Firebase no plano Spark, sem Firebase Storage:
+O site usa Firebase:
 
 - Firebase Auth faz cadastro e login por e-mail e senha.
 - Firestore salva usuarios em `users/{uid}`.
-- Fotógrafos salvam perfil, contatos e links de fotos em `photographers/{uid}`.
-- A listagem publica dos fotografos fica em `platform/directory`.
-- As imagens devem ser adicionadas por URL externa, por exemplo Cloudinary, Imgur ou outro host de imagens.
-- O Firebase Storage nao e usado porque exige upgrade do projeto.
+- Fotografos salvam perfil, contatos e links de fotos em `photographers/{uid}`.
+- A listagem publica antiga fica em `platform/directory`.
+- A listagem publica nova tambem pode usar `publicPhotographers/{uid}`, evitando conflito de escrita em array unico.
+- Pedidos de orcamento podem ser salvos em `leads`.
+- As imagens podem ser adicionadas por URL externa.
+- Se o Firebase Storage estiver configurado, o editor tambem aceita upload direto de JPG, PNG ou WebP ate 8 MB.
 
 Para ativar:
 
@@ -79,6 +81,34 @@ service cloud.firestore {
     match /photographers/{userId} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /publicPhotographers/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /leads/{leadId} {
+      allow create: if true;
+      allow read, update: if request.auth != null
+        && resource.data.photographerId == request.auth.uid;
+    }
+  }
+}
+```
+
+Regras iniciais sugeridas para Storage, se usar upload direto:
+
+```js
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /photographers/{userId}/photos/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
     }
   }
 }

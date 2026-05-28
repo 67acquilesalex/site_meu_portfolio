@@ -29,16 +29,27 @@ import {
 const appState = {
   auth: null,
   db: null,
+  storage: null,
   firebaseReady: false,
   firebaseError: "",
   modules: {},
   photographers: [],
+  leads: [],
+  unsubscribeLeads: null,
   profile: null,
   user: null,
   accountTab: "inicio",
+  directorySearch: "",
+  directoryCategory: "",
+  directoryResultCount: 0,
+  lightbox: {
+    items: [],
+    index: 0,
+  },
 };
 
 const albumBySlug = new Map(albums.map((album) => [album.slug, album]));
+const directoryFilters = ["Familia", "Gestante", "Casal", "Eventos", "Empresarial", "Imoveis"];
 
 const authErrorMessage = (error) => {
   const messages = {
@@ -61,7 +72,11 @@ const authErrorMessage = (error) => {
     "auth/invalid-api-key": "A chave do Firebase é inválida. Copie novamente a configuração Web App do seu projeto Firebase.",
     "auth/operation-not-allowed": "Este tipo de login ainda nao esta ativado no Firebase Authentication.",
     "auth/app-not-authorized": "Este dominio nao esta autorizado para usar esta chave do Firebase.",
+    "storage/unauthorized": "O Firebase Storage negou o upload. Publique as regras de Storage para fotografos logados.",
     "permission-denied": "O Firestore negou a escrita. Publique as regras do banco de dados no Firebase.",
+    "local/invalid-url": "Use uma URL valida, comecando por https:// ou http://.",
+    "local/invalid-image": "Envie uma imagem JPG, PNG ou WebP com ate 8 MB.",
+    "local/storage-unavailable": "O upload direto precisa do Firebase Storage configurado. Use uma URL de imagem por enquanto.",
   };
   if (String(error?.message || "").includes("Missing or insufficient permissions")) {
     return "O Firestore negou a escrita. Publique as regras do banco de dados no Firebase.";
@@ -77,7 +92,20 @@ const navItem = (href, label, slugs) => {
   return `<a${active} href="${href}">${label}</a>`;
 };
 
-const navButton = (label, className = "") => `<button class="${className}" type="button" data-open-account>${label}</button>`;
+const navButton = (label, className = "", extraAttributes = "") => `<button class="${className}" type="button" data-open-account ${extraAttributes}>${label}</button>`;
+
+const accountEntryLabel = () => appState.user ? "Minha pagina" : "Entrar";
+
+const refreshAccountLabels = () => {
+  document.querySelectorAll("[data-account-label]").forEach((button) => {
+    button.textContent = accountEntryLabel();
+  });
+
+  document.querySelectorAll("[data-admin-launcher]").forEach((button) => {
+    button.textContent = appState.user ? "Minha pagina" : "Conta";
+    button.setAttribute("aria-label", appState.user ? "Abrir minha pagina" : "Abrir conta");
+  });
+};
 
 const renderLayout = () => {
   document.querySelectorAll("[data-site-header], .site-header").forEach((header) => {
@@ -97,8 +125,8 @@ const renderLayout = () => {
         <nav class="main-nav" aria-label="Site">
           ${navItem("index.html", "Home", ["index"])}
           ${navItem("portfolio.html", "Fotógrafos", ["portfolio"])}
-          ${navButton("Criar página", "nav-cta")}
-          ${navButton("Conta")}
+          ${navButton("Criar pagina", "nav-cta")}
+          ${navButton(accountEntryLabel(), "", "data-account-label")}
         </nav>
       </div>
     `;
@@ -114,6 +142,8 @@ const renderLayout = () => {
       </div>
     `;
   });
+
+  refreshAccountLabels();
 };
 
 const initializeMenus = () => {
@@ -158,7 +188,11 @@ const albumCard = (album, index) => {
 const photoNode = ([src, alt]) => {
   const item = document.createElement("figure");
   item.className = "photo-item";
-  item.innerHTML = `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy" />`;
+  item.innerHTML = `
+    <button class="lightbox-thumb" type="button" data-lightbox-src="${escapeHtml(src)}" data-lightbox-title="${escapeHtml(alt)}" data-lightbox-group="category-gallery">
+      <img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy" />
+    </button>
+  `;
   return item;
 };
 
@@ -169,15 +203,74 @@ const emptyState = (message) => {
   return item;
 };
 
-const directoryEmptyState = () => {
+const normalizeForSearch = (value) => cleanText(value)
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .toLowerCase();
+
+const photographerSearchText = (photographer) => {
+  const profile = normalizePhotographerProfile(photographer);
+  const services = serviceListForDisplay(profile);
+  return normalizeForSearch([
+    profile.displayName,
+    profile.city,
+    profile.bio,
+    profile.headline,
+    profile.availability,
+    ...profile.categories,
+    ...services.flatMap((service) => [service.title, service.description]),
+  ].filter(Boolean).join(" "));
+};
+
+const filterDirectoryPhotographers = (photographers) => {
+  const search = normalizeForSearch(appState.directorySearch);
+  const category = normalizeForSearch(appState.directoryCategory);
+
+  return photographers.filter((photographer) => {
+    const haystack = photographerSearchText(photographer);
+    return (!search || haystack.includes(search)) && (!category || haystack.includes(category));
+  });
+};
+
+const syncDirectoryControls = () => {
+  document.querySelectorAll("[data-directory-search]").forEach((input) => {
+    if (input.value !== appState.directorySearch) input.value = appState.directorySearch;
+  });
+
+  document.querySelectorAll("[data-directory-filter]").forEach((button) => {
+    const active = normalizeForSearch(button.dataset.directoryFilter) === normalizeForSearch(appState.directoryCategory);
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+
+  document.querySelectorAll("[data-directory-count]").forEach((node) => {
+    const count = appState.directoryResultCount;
+    node.textContent = count === 1 ? "1 fotografo encontrado" : `${count} fotografos encontrados`;
+  });
+};
+
+const clearDirectoryFilters = () => {
+  appState.directorySearch = "";
+  appState.directoryCategory = "";
+  renderPhotographerCards();
+};
+
+const directoryEmptyState = (filtered = false) => {
   const item = document.createElement("article");
   item.className = "platform-empty directory-empty";
-  item.innerHTML = `
-    <span>Nenhum fotógrafo publicado ainda</span>
-    <h2>Crie a primeira página de portfólio da plataforma.</h2>
-    <p>Entre na sua conta, preencha o perfil, adicione fotos e marque a opção de publicar.</p>
-    <button class="text-button" type="button" data-open-account>Criar minha página</button>
-  `;
+  item.innerHTML = filtered
+    ? `
+      <span>Nenhum resultado</span>
+      <h2>Nenhum fotografo encontrado.</h2>
+      <p>Tente outro nome, cidade ou categoria para ampliar a busca.</p>
+      <button class="text-button" type="button" data-directory-clear>Limpar busca</button>
+    `
+    : `
+      <span>Nenhum fotografo publicado ainda</span>
+      <h2>Crie a primeira pagina de portfolio da plataforma.</h2>
+      <p>Entre na sua conta, preencha o perfil, adicione fotos e marque a opcao de publicar.</p>
+      <button class="text-button" type="button" data-open-account>Criar minha pagina</button>
+    `;
   return item;
 };
 
@@ -210,13 +303,13 @@ const photographerCard = (photographer) => {
   return card;
 };
 
-const renderDirectory = (gallery, publicPhotographers) => {
+const renderDirectory = (gallery, publicPhotographers, filtered = false) => {
   gallery.classList.add("photographer-directory");
   gallery.classList.remove("photographer-detail-grid");
   gallery.replaceChildren(
     ...(publicPhotographers.length
       ? publicPhotographers.map(photographerCard)
-      : [directoryEmptyState()]),
+      : [directoryEmptyState(filtered)]),
   );
 };
 
@@ -248,10 +341,17 @@ const renderPhotographerCards = () => {
   const params = new URLSearchParams(location.search);
   const selectedId = params.get("fotografo");
   const publicPhotographers = appState.photographers.filter((item) => item.published);
+  const filteredPhotographers = filterDirectoryPhotographers(publicPhotographers);
+  const hasActiveDirectoryFilter = Boolean(cleanText(appState.directorySearch) || cleanText(appState.directoryCategory));
   const directoryGalleries = document.querySelectorAll("[data-photographer-directory]");
   document.body.classList.toggle("photographer-site-view", currentSlug() === "portfolio" && Boolean(selectedId));
+  appState.directoryResultCount = filteredPhotographers.length;
 
-  directoryGalleries.forEach((gallery) => renderDirectory(gallery, publicPhotographers));
+  document.querySelectorAll("[data-directory-toolbar]").forEach((toolbar) => {
+    toolbar.hidden = currentSlug() === "portfolio" && Boolean(selectedId);
+  });
+  directoryGalleries.forEach((gallery) => renderDirectory(gallery, filteredPhotographers, hasActiveDirectoryFilter));
+  syncDirectoryControls();
 
   if (currentSlug() !== "portfolio") {
     if (!directoryGalleries.length) renderDefaultPortfolio();
@@ -268,7 +368,59 @@ const renderPhotographerCards = () => {
     return;
   }
 
-  renderDirectory(gallery, publicPhotographers);
+  renderDirectory(gallery, filteredPhotographers, hasActiveDirectoryFilter);
+};
+
+const initializeDirectoryControls = () => {
+  const params = new URLSearchParams(location.search);
+  appState.directorySearch = cleanText(params.get("busca") || appState.directorySearch);
+  appState.directoryCategory = cleanText(params.get("categoria") || appState.directoryCategory);
+
+  document.querySelectorAll("[data-directory-filters]").forEach((container) => {
+    if (container.children.length) return;
+    container.replaceChildren(...directoryFilters.map((filter) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.directoryFilter = filter;
+      button.setAttribute("aria-pressed", "false");
+      button.textContent = filter;
+      return button;
+    }));
+  });
+
+  document.addEventListener("input", (event) => {
+    const input = event.target.closest("[data-directory-search]");
+    if (!input) return;
+    appState.directorySearch = cleanText(input.value);
+    renderPhotographerCards();
+  });
+
+  document.addEventListener("submit", (event) => {
+    const form = event.target.closest("[data-directory-search-form]");
+    if (!form) return;
+    event.preventDefault();
+    appState.directorySearch = cleanText(form.querySelector("[data-directory-search]")?.value);
+    renderPhotographerCards();
+  });
+
+  document.addEventListener("click", (event) => {
+    const filterButton = event.target.closest("[data-directory-filter]");
+    const clearButton = event.target.closest("[data-directory-clear]");
+
+    if (filterButton) {
+      const nextCategory = cleanText(filterButton.dataset.directoryFilter);
+      appState.directoryCategory = normalizeForSearch(appState.directoryCategory) === normalizeForSearch(nextCategory)
+        ? ""
+        : nextCategory;
+      renderPhotographerCards();
+    }
+
+    if (clearButton) {
+      clearDirectoryFilters();
+    }
+  });
+
+  syncDirectoryControls();
 };
 
 const renderPhotographerDetail = (gallery, photographer) => {
@@ -437,6 +589,30 @@ const renderPhotographerDetail = (gallery, photographer) => {
   gallery.replaceChildren(site);
 };
 
+const publicPagesInOrder = (page) => {
+  const pageById = new Map(PUBLIC_PAGES.map((item) => [item[0], item]));
+  const orderedIds = [
+    ...page.sectionOrder.filter((id) => pageById.has(id)),
+    ...PUBLIC_PAGES.map(([id]) => id).filter((id) => !page.sectionOrder.includes(id)),
+  ];
+
+  return orderedIds
+    .map((id) => pageById.get(id))
+    .filter(([, , visibilityKey]) => page[visibilityKey] !== false);
+};
+
+const galleryPhotoMarkup = (photo, displayName, group = "profile-gallery") => {
+  const title = cleanText(photo.title || displayName || "Foto");
+  return `
+    <figure>
+      <button class="lightbox-thumb" type="button" data-lightbox-src="${escapeHtml(photo.url)}" data-lightbox-title="${escapeHtml(title)}" data-lightbox-group="${escapeHtml(group)}">
+        <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(title)}" loading="lazy" />
+      </button>
+      ${photo.title ? `<figcaption>${escapeHtml(photo.title)}</figcaption>` : ""}
+    </figure>
+  `;
+};
+
 const renderPhotographerSite = (gallery, photographer) => {
   gallery.classList.add("photographer-detail-grid");
   gallery.classList.remove("photographer-directory");
@@ -460,7 +636,7 @@ const renderPhotographerSite = (gallery, photographer) => {
   const publicEmail = cleanText(profile.publicEmail);
   const displayName = profile.displayName || "Fotógrafo";
   const headline = profile.headline || profile.bio || "Portfolio fotografico com ensaios, projetos e contatos profissionais.";
-  const availablePages = PUBLIC_PAGES.filter(([, , visibilityKey]) => page[visibilityKey] !== false);
+  const availablePages = publicPagesInOrder(page);
   if (!availablePages.length) availablePages.push(PUBLIC_PAGES[0]);
 
   const requestedPage = new URLSearchParams(location.search).get("pagina") || availablePages[0][0];
@@ -497,12 +673,7 @@ const renderPhotographerSite = (gallery, photographer) => {
         <p>Uma seleção das fotos publicadas por ${escapeHtml(displayName)}.</p>
       </div>
       <div class="photographer-site-gallery">
-        ${photos.length ? photos.map((photo) => `
-          <figure>
-            <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.title || displayName || "Foto")}" loading="lazy" />
-            ${photo.title ? `<figcaption>${escapeHtml(photo.title)}</figcaption>` : ""}
-          </figure>
-        `).join("") : `<p class="mock-empty">Este fotógrafo ainda não publicou fotos visíveis.</p>`}
+        ${photos.length ? photos.map((photo) => galleryPhotoMarkup(photo, displayName)).join("") : `<p class="mock-empty">Este fotógrafo ainda não publicou fotos visíveis.</p>`}
       </div>
     </section>
   `;
@@ -594,9 +765,10 @@ const renderPhotographerSite = (gallery, photographer) => {
 
   const budgetForm = site.querySelector("[data-profile-budget]");
   if (budgetForm && budgetWhatsapp) {
-    budgetForm.addEventListener("submit", (event) => {
+    budgetForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const formData = new FormData(budgetForm);
+      const submitButton = budgetForm.querySelector('button[type="submit"]');
       const message = [
         budget.defaultMessage || `Ola, ${displayName}! Gostaria de solicitar um orcamento.`,
         "",
@@ -607,20 +779,131 @@ const renderPhotographerSite = (gallery, photographer) => {
         `Mensagem: ${formData.get("mensagem") || ""}`,
       ].join("\n");
 
+      setButtonBusy(submitButton, true, "Abrindo WhatsApp...");
+      await saveLead({
+        photographerId: photographer.uid,
+        photographerName: displayName,
+        source: "public-profile-budget",
+        formData,
+      });
       window.open(`${budgetWhatsapp}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+      setButtonBusy(submitButton, false);
     });
   }
 
   gallery.replaceChildren(site);
 };
 
+const lightboxElements = () => {
+  let overlay = document.querySelector("[data-lightbox]");
+  if (overlay) return overlay;
+
+  overlay = document.createElement("div");
+  overlay.className = "lightbox";
+  overlay.dataset.lightbox = "";
+  overlay.hidden = true;
+  overlay.innerHTML = `
+    <div class="lightbox-panel" role="dialog" aria-modal="true" aria-label="Foto ampliada">
+      <button class="lightbox-close" type="button" data-lightbox-close>Fechar</button>
+      <button class="lightbox-nav lightbox-prev" type="button" data-lightbox-prev aria-label="Foto anterior">Anterior</button>
+      <figure>
+        <img alt="" data-lightbox-image />
+        <figcaption data-lightbox-caption></figcaption>
+      </figure>
+      <button class="lightbox-nav lightbox-next" type="button" data-lightbox-next aria-label="Proxima foto">Proxima</button>
+    </div>
+  `;
+  document.body.append(overlay);
+  return overlay;
+};
+
+const updateLightbox = () => {
+  const overlay = lightboxElements();
+  const current = appState.lightbox.items[appState.lightbox.index];
+  const image = overlay.querySelector("[data-lightbox-image]");
+  const caption = overlay.querySelector("[data-lightbox-caption]");
+  const hasMany = appState.lightbox.items.length > 1;
+
+  if (!current || !image || !caption) return;
+  image.src = current.src;
+  image.alt = current.title || "Foto ampliada";
+  caption.textContent = current.title || "";
+  overlay.querySelector("[data-lightbox-prev]").hidden = !hasMany;
+  overlay.querySelector("[data-lightbox-next]").hidden = !hasMany;
+};
+
+const openLightbox = (trigger) => {
+  const group = trigger.dataset.lightboxGroup || "gallery";
+  const safeGroup = globalThis.CSS?.escape ? CSS.escape(group) : group.replace(/"/g, '\\"');
+  const groupItems = [...document.querySelectorAll(`[data-lightbox-src][data-lightbox-group="${safeGroup}"]`)];
+  const items = groupItems
+    .map((item) => ({
+      src: item.dataset.lightboxSrc,
+      title: item.dataset.lightboxTitle || item.querySelector("img")?.alt || "",
+    }))
+    .filter((item) => item.src);
+  const index = Math.max(0, groupItems.indexOf(trigger));
+
+  if (!items.length) return;
+  appState.lightbox = { items, index };
+  const overlay = lightboxElements();
+  overlay.hidden = false;
+  document.body.classList.add("lightbox-open");
+  updateLightbox();
+  overlay.querySelector("[data-lightbox-close]")?.focus();
+};
+
+const closeLightbox = () => {
+  const overlay = document.querySelector("[data-lightbox]");
+  if (!overlay) return;
+  overlay.hidden = true;
+  document.body.classList.remove("lightbox-open");
+};
+
+const moveLightbox = (direction) => {
+  const total = appState.lightbox.items.length;
+  if (!total) return;
+  appState.lightbox.index = (appState.lightbox.index + direction + total) % total;
+  updateLightbox();
+};
+
+const initializeLightbox = () => {
+  document.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-lightbox-src]");
+    const close = event.target.closest("[data-lightbox-close]");
+    const prev = event.target.closest("[data-lightbox-prev]");
+    const next = event.target.closest("[data-lightbox-next]");
+    const overlay = event.target.closest("[data-lightbox]");
+
+    if (trigger) {
+      event.preventDefault();
+      openLightbox(trigger);
+    } else if (close || (overlay && event.target === overlay)) {
+      closeLightbox();
+    } else if (prev) {
+      moveLightbox(-1);
+    } else if (next) {
+      moveLightbox(1);
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    const overlay = document.querySelector("[data-lightbox]");
+    if (!overlay || overlay.hidden) return;
+    if (event.key === "Escape") closeLightbox();
+    if (event.key === "ArrowLeft") moveLightbox(-1);
+    if (event.key === "ArrowRight") moveLightbox(1);
+  });
+};
+
 const initializeBudgetForm = () => {
   const budgetForm = document.querySelector("[data-budget-form]");
   if (!budgetForm) return;
 
-  budgetForm.addEventListener("submit", (event) => {
+  budgetForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formData = new FormData(budgetForm);
+    const submitButton = budgetForm.querySelector('button[type="submit"]');
     const message = [
       "Olá! Gostaria de solicitar um orçamento.",
       "",
@@ -632,7 +915,14 @@ const initializeBudgetForm = () => {
       `Mensagem: ${formData.get("mensagem") || ""}`,
     ].join("\n");
 
+    setButtonBusy(submitButton, true, "Abrindo WhatsApp...");
+    await saveLead({
+      photographerName: contact.brand,
+      source: "site-budget",
+      formData,
+    });
     window.open(`https://wa.me/${contact.whatsapp}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+    setButtonBusy(submitButton, false);
   });
 };
 
@@ -640,16 +930,18 @@ const connectFirebase = async () => {
   if (!hasFirebaseConfig) return false;
 
   try {
-    const [appModule, authModule, firestoreModule] = await Promise.all([
+    const [appModule, authModule, firestoreModule, storageModule] = await Promise.all([
       import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"),
       import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js"),
       import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js"),
     ]);
 
     const app = appModule.initializeApp(firebaseConfig);
     appState.auth = authModule.getAuth(app);
     appState.db = firestoreModule.getFirestore(app);
-    appState.modules = { auth: authModule, firestore: firestoreModule };
+    appState.storage = storageModule.getStorage(app);
+    appState.modules = { auth: authModule, firestore: firestoreModule, storage: storageModule };
     appState.firebaseReady = true;
   } catch (error) {
     appState.firebaseError = authErrorMessage(error);
@@ -662,7 +954,35 @@ const connectFirebase = async () => {
 const userDoc = (uid) => appState.modules.firestore.doc(appState.db, "users", uid);
 const photographerDoc = (uid) => appState.modules.firestore.doc(appState.db, "photographers", uid);
 const directoryDoc = () => appState.modules.firestore.doc(appState.db, "platform", "directory");
+const publicPhotographerDoc = (uid) => appState.modules.firestore.doc(appState.db, "publicPhotographers", uid);
+const publicPhotographersCollection = () => appState.modules.firestore.collection(appState.db, "publicPhotographers");
 const timestamp = () => appState.modules.firestore.serverTimestamp();
+const saveLead = async ({ photographerId = "", photographerName = "", source = "budget", formData }) => {
+  if (!appState.firebaseReady || !formData) return false;
+
+  try {
+    await appState.modules.firestore.addDoc(
+      appState.modules.firestore.collection(appState.db, "leads"),
+      {
+        photographerId,
+        photographerName,
+        source,
+        clientName: cleanText(formData.get("nome")),
+        clientWhatsapp: cleanText(formData.get("telefone")),
+        clientEmail: cleanText(formData.get("email")),
+        service: cleanText(formData.get("segmento")),
+        desiredDate: cleanText(formData.get("data")),
+        message: cleanText(formData.get("mensagem")),
+        status: "new",
+        createdAt: timestamp(),
+      },
+    );
+    return true;
+  } catch (error) {
+    console.warn("Lead nao foi salvo no Firestore:", error);
+    return false;
+  }
+};
 const publicProfileUrl = (uid, page = "inicio") => {
   const url = new URL("portfolio.html", location.href);
   url.searchParams.set("fotografo", uid);
@@ -683,6 +1003,36 @@ const instagramUrl = (value) => {
 const whatsappUrl = (value) => {
   const digits = cleanText(value).replace(/\D/g, "");
   return digits ? `https://wa.me/${digits}` : "";
+};
+const normalizePublicImageUrl = (value) => {
+  const url = cleanText(value);
+  if (!url) return "";
+  if (/^(assets\/|\.\/assets\/)/i.test(url)) return url;
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") return parsed.href;
+  } catch {
+    throw { code: "local/invalid-url" };
+  }
+
+  throw { code: "local/invalid-url" };
+};
+const validateImageFile = (file) => {
+  if (!file) return;
+  const allowed = ["image/jpeg", "image/png", "image/webp"];
+  if (!allowed.includes(file.type) || file.size > 8 * 1024 * 1024) {
+    throw { code: "local/invalid-image" };
+  }
+};
+
+const uploadPhotoFile = async (file, photoId) => {
+  validateImageFile(file);
+  if (!appState.storage || !appState.modules.storage) throw { code: "local/storage-unavailable" };
+  const safeName = cleanText(file.name, "foto").replace(/[^a-z0-9._-]+/gi, "-").slice(0, 80);
+  const storageRef = appState.modules.storage.ref(appState.storage, `photographers/${appState.user.uid}/photos/${photoId}-${safeName}`);
+  await appState.modules.storage.uploadBytes(storageRef, file, { contentType: file.type });
+  return appState.modules.storage.getDownloadURL(storageRef);
 };
 const copyText = async (value) => {
   if (navigator.clipboard?.writeText) {
@@ -733,14 +1083,68 @@ const watchPhotographers = () => {
     return;
   }
 
+  let collectionProfiles = null;
+  let directoryProfiles = [];
+  const applyProfiles = () => {
+    const merged = new Map(directoryProfiles.map((profile) => [profile.uid, profile]));
+    (collectionProfiles || []).forEach((profile) => merged.set(profile.uid, profile));
+    appState.photographers = [...merged.values()];
+    renderPhotographerCards();
+  };
+
+  appState.modules.firestore.onSnapshot(publicPhotographersCollection(), (snapshot) => {
+    collectionProfiles = snapshot.docs.map((doc) => ({
+      uid: doc.id,
+      ...doc.data(),
+    }));
+    applyProfiles();
+  }, () => {
+    collectionProfiles = null;
+    applyProfiles();
+  });
+
   appState.modules.firestore.onSnapshot(directoryDoc(), (snapshot) => {
     const data = snapshot.data();
-    appState.photographers = Array.isArray(data?.photographers) ? data.photographers : [];
-    renderPhotographerCards();
+    directoryProfiles = Array.isArray(data?.photographers) ? data.photographers : [];
+    applyProfiles();
   }, () => {
-    appState.photographers = [];
-    renderPhotographerCards();
+    directoryProfiles = [];
+    applyProfiles();
   });
+};
+
+const stopWatchingLeads = () => {
+  if (typeof appState.unsubscribeLeads === "function") appState.unsubscribeLeads();
+  appState.unsubscribeLeads = null;
+  appState.leads = [];
+};
+
+const watchOwnLeads = (uid, root) => {
+  stopWatchingLeads();
+  if (!appState.firebaseReady || !uid) return;
+
+  try {
+    const query = appState.modules.firestore.query(
+      appState.modules.firestore.collection(appState.db, "leads"),
+      appState.modules.firestore.where("photographerId", "==", uid),
+    );
+    appState.unsubscribeLeads = appState.modules.firestore.onSnapshot(query, (snapshot) => {
+      appState.leads = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .sort((first, second) => {
+          const firstDate = first.createdAt?.toMillis?.() || 0;
+          const secondDate = second.createdAt?.toMillis?.() || 0;
+          return secondDate - firstDate;
+        });
+      if (root?.querySelector("[data-account-root], [data-photographer-form]")) renderDashboard(root);
+    }, () => {
+      appState.leads = [];
+      if (root?.querySelector("[data-account-root], [data-photographer-form]")) renderDashboard(root);
+    });
+  } catch (error) {
+    console.warn("Caixa de entrada indisponivel:", error);
+    appState.leads = [];
+  }
 };
 
 const saveDirectoryProfile = async (uid, profile) => {
@@ -771,6 +1175,15 @@ const saveDirectoryProfile = async (uid, profile) => {
     { photographers: [publicProfile, ...current.filter((item) => item.uid !== uid)], updatedAt: timestamp() },
     { merge: true },
   );
+  try {
+    await appState.modules.firestore.setDoc(
+      publicPhotographerDoc(uid),
+      { ...publicProfile, updatedAt: timestamp() },
+      { merge: true },
+    );
+  } catch (error) {
+    console.warn("publicPhotographers nao foi atualizado:", error);
+  }
 };
 
 const readOwnProfile = async (user) => {
@@ -846,20 +1259,25 @@ const readOrCreateProfile = async (user) => {
 
 const readPhotoEditors = (form, currentPhotos) => {
   const currentById = new Map(normalizePhotos(currentPhotos).map((photo) => [photo.id, photo]));
-  return [...form.querySelectorAll("[data-photo-editor]")].map((editor, index) => {
+  const photos = [...form.querySelectorAll("[data-photo-editor]")].map((editor, index) => {
     const id = cleanText(editor.dataset.photoId, makeId("photo"));
     const current = currentById.get(id) || {};
 
     return {
       ...current,
       id,
-      url: cleanText(editor.dataset.photoUrl || current.url),
+      url: normalizePublicImageUrl(editor.dataset.photoUrl || current.url),
       title: cleanText(editor.querySelector("[data-photo-title]")?.value, "Foto"),
       visible: editor.querySelector("[data-photo-visible]")?.checked !== false,
       featured: Boolean(editor.querySelector("[data-photo-featured]")?.checked),
       order: index,
     };
   }).filter((photo) => photo.url);
+  const featuredIndex = photos.findIndex((photo) => photo.featured);
+  return photos.map((photo, index) => ({
+    ...photo,
+    featured: featuredIndex >= 0 ? index === featuredIndex : index === 0,
+  }));
 };
 
 const readServiceEditors = (form, currentServices) => {
@@ -873,11 +1291,18 @@ const readServiceEditors = (form, currentServices) => {
       id,
       title: cleanText(editor.querySelector("[data-service-title]")?.value),
       description: cleanText(editor.querySelector("[data-service-description]")?.value),
-      imageUrl: cleanText(editor.querySelector("[data-service-image]")?.value),
+      imageUrl: normalizePublicImageUrl(editor.querySelector("[data-service-image]")?.value),
       visible: editor.querySelector("[data-service-visible]")?.checked !== false,
       order: index,
     };
   }).filter((service) => service.title);
+};
+
+const readSectionOrder = (form, fallbackOrder = DEFAULT_PAGE_SETTINGS.sectionOrder) => {
+  const ids = [...form.querySelectorAll("[data-section-editor]")]
+    .map((editor) => cleanText(editor.dataset.sectionId))
+    .filter((id) => PUBLIC_PAGES.some(([pageId]) => pageId === id));
+  return ids.length ? ids : fallbackOrder;
 };
 
 const savePhotographerProfile = async (form) => {
@@ -891,7 +1316,7 @@ const savePhotographerProfile = async (form) => {
     showServices: formData.get("showServices") === "on",
     showBudget: formData.get("showBudget") === "on",
     showContact: formData.get("showContact") === "on",
-    sectionOrder: currentProfile.page.sectionOrder,
+    sectionOrder: readSectionOrder(form, currentProfile.page.sectionOrder),
   });
   const nextProfile = {
     ...currentProfile,
@@ -902,7 +1327,7 @@ const savePhotographerProfile = async (form) => {
     whatsapp: cleanText(formData.get("whatsapp")),
     instagram: cleanText(formData.get("instagram")),
     publicEmail: cleanText(formData.get("publicEmail")),
-    coverUrl: cleanText(formData.get("coverUrl")),
+    coverUrl: normalizePublicImageUrl(formData.get("coverUrl")),
     availability: cleanText(formData.get("availability")),
     categories: splitList(formData.get("categories")),
     page,
@@ -930,7 +1355,10 @@ const savePhotographerProfile = async (form) => {
 const addPhoto = async (root) => {
   const titleInput = root.querySelector("[data-new-photo-title]");
   const urlInput = root.querySelector("[data-new-photo-url]");
-  const url = cleanText(urlInput?.value);
+  const fileInput = root.querySelector("[data-new-photo-file]");
+  const file = fileInput?.files?.[0];
+  const photoId = makeId("photo");
+  const url = normalizePublicImageUrl(urlInput?.value) || (file ? await uploadPhotoFile(file, photoId) : "");
   if (!url) return;
 
   const current = normalizePhotographerProfile(appState.profile?.photographer || {}, appState.profile?.name || "");
@@ -941,7 +1369,7 @@ const addPhoto = async (root) => {
     photos: [
       ...photos,
       {
-        id: makeId("photo"),
+        id: photoId,
         url,
         title: cleanText(titleInput?.value, "Foto"),
         order: photos.length,
@@ -958,6 +1386,7 @@ const addPhoto = async (root) => {
   appState.profile.photographer = nextProfile;
   if (titleInput) titleInput.value = "";
   if (urlInput) urlInput.value = "";
+  if (fileInput) fileInput.value = "";
 };
 
 const removePhoto = async (photoId) => {
@@ -1025,6 +1454,32 @@ const removeService = async (serviceId) => {
   appState.profile.photographer = nextProfile;
 };
 
+const updateEditorOrderLabels = (container, itemSelector, labelSelector, labelPrefix) => {
+  container.querySelectorAll(itemSelector).forEach((item, index) => {
+    const label = item.querySelector(labelSelector);
+    if (label) label.textContent = `${labelPrefix} ${index + 1}`;
+  });
+};
+
+const moveEditorItem = (button, itemSelector, direction) => {
+  const item = button.closest(itemSelector);
+  const container = item?.parentElement;
+  if (!item || !container) return false;
+
+  if (direction < 0 && item.previousElementSibling) {
+    container.insertBefore(item, item.previousElementSibling);
+  } else if (direction > 0 && item.nextElementSibling) {
+    container.insertBefore(item.nextElementSibling, item);
+  } else {
+    return false;
+  }
+
+  updateEditorOrderLabels(container, "[data-photo-editor]", "[data-photo-position]", "Posicao");
+  updateEditorOrderLabels(container, "[data-service-editor]", "[data-service-position]", "Servico");
+  updateEditorOrderLabels(container, "[data-section-editor]", "[data-section-position]", "Secao");
+  return true;
+};
+
 const buildAccountShell = () => {
   let shell = document.querySelector("[data-account-shell]");
   if (!shell) {
@@ -1045,9 +1500,8 @@ const buildAccountShell = () => {
     document.body.append(launcher);
   }
 
-  launcher.textContent = "Conta";
   launcher.hidden = false;
-  launcher.setAttribute("aria-label", "Abrir conta");
+  refreshAccountLabels();
   const openAccount = () => {
     shell.classList.add("is-open");
     shell.querySelector("input, button, textarea")?.focus();
@@ -1214,21 +1668,63 @@ const photoEditorMarkup = (photo, index) => `
     <label>Titulo<input value="${escapeHtml(photo.title || "")}" data-photo-title /></label>
     <label class="account-check"><input type="checkbox" data-photo-visible ${photo.visible !== false ? "checked" : ""} /> Visivel na pagina</label>
     <label class="account-check"><input type="checkbox" data-photo-featured ${photo.featured ? "checked" : ""} /> Foto de destaque</label>
-    <span>Posicao ${index + 1}</span>
-    <button type="button" data-remove-photo="${escapeHtml(photo.id)}">Remover</button>
+    <span data-photo-position>Posicao ${index + 1}</span>
+    <div class="item-order-actions">
+      <button type="button" data-move-photo="-1">Subir</button>
+      <button type="button" data-move-photo="1">Descer</button>
+      <button type="button" data-remove-photo="${escapeHtml(photo.id)}">Remover</button>
+    </div>
   </article>
 `;
 
 const serviceEditorMarkup = (service, index) => `
   <article data-service-editor data-service-id="${escapeHtml(service.id)}">
-    <span>Servico ${String(index + 1).padStart(2, "0")}</span>
+    <span data-service-position>Servico ${index + 1}</span>
     <label>Titulo<input value="${escapeHtml(service.title || "")}" data-service-title /></label>
     <label>Descricao<textarea rows="3" data-service-description>${escapeHtml(service.description || "")}</textarea></label>
     <label>Imagem opcional por URL<input value="${escapeHtml(service.imageUrl || "")}" data-service-image placeholder="https://..." /></label>
     <label class="account-check"><input type="checkbox" data-service-visible ${service.visible !== false ? "checked" : ""} /> Visivel na pagina</label>
-    <button type="button" data-remove-service="${escapeHtml(service.id)}">Remover servico</button>
+    <div class="item-order-actions">
+      <button type="button" data-move-service="-1">Subir</button>
+      <button type="button" data-move-service="1">Descer</button>
+      <button type="button" data-remove-service="${escapeHtml(service.id)}">Remover</button>
+    </div>
   </article>
 `;
+
+const sectionEditorMarkup = ([id, label], index) => `
+  <article data-section-editor data-section-id="${escapeHtml(id)}">
+    <span data-section-position>Secao ${index + 1}</span>
+    <strong>${escapeHtml(label)}</strong>
+    <div class="item-order-actions">
+      <button type="button" data-move-section="-1">Subir</button>
+      <button type="button" data-move-section="1">Descer</button>
+    </div>
+  </article>
+`;
+
+const formatLeadDate = (value) => {
+  const date = value?.toDate?.() || (value ? new Date(value) : null);
+  if (!date || Number.isNaN(date.getTime())) return "Agora";
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
+};
+
+const leadCardMarkup = (lead) => {
+  const whatsapp = whatsappUrl(lead.clientWhatsapp);
+  return `
+    <article class="lead-card">
+      <span>${escapeHtml(formatLeadDate(lead.createdAt))}</span>
+      <h4>${escapeHtml(lead.clientName || "Cliente sem nome")}</h4>
+      <p>${escapeHtml(lead.service || "Pedido de orcamento")}</p>
+      ${lead.message ? `<blockquote>${escapeHtml(lead.message)}</blockquote>` : ""}
+      <div class="lead-card-actions">
+        ${lead.clientWhatsapp ? `<small>${escapeHtml(lead.clientWhatsapp)}</small>` : ""}
+        ${lead.clientEmail ? `<small>${escapeHtml(lead.clientEmail)}</small>` : ""}
+        ${whatsapp ? `<a href="${escapeHtml(whatsapp)}" target="_blank" rel="noopener noreferrer">Abrir WhatsApp</a>` : ""}
+      </div>
+    </article>
+  `;
+};
 
 const accountPreviewMarkup = (photographer, profileUrl, readinessMessage) => {
   const page = normalizePageSettings(photographer.page);
@@ -1268,6 +1764,8 @@ const renderDashboard = (root, message = "") => {
   const services = normalizeStoredServices(photographer.services);
   const page = normalizePageSettings(photographer.page);
   const budget = normalizeBudget(photographer);
+  const orderedSections = publicPagesInOrder({ ...page, showHero: true, showPortfolio: true, showServices: true, showBudget: true, showContact: true });
+  const leads = appState.leads || [];
   const isPublished = Boolean(photographer.published);
   const profileUrl = publicProfileUrl(profile.uid || appState.user?.uid || "");
   const missingItems = [
@@ -1330,6 +1828,7 @@ const renderDashboard = (root, message = "") => {
             <div class="account-inline-form">
               <label>Titulo da nova foto<input data-new-photo-title placeholder="Ensaio externo" /></label>
               <label>URL da imagem<input data-new-photo-url placeholder="https://..." /></label>
+              <label>Upload de imagem<input data-new-photo-file type="file" accept="image/jpeg,image/png,image/webp" /></label>
               <button type="button" data-add-photo>Adicionar foto</button>
             </div>
             <div class="photo-manager">
@@ -1384,6 +1883,17 @@ const renderDashboard = (root, message = "") => {
             </div>
           </section>
 
+          <section class="${accountTabPanelClass("inbox")}" data-account-tab-panel="inbox">
+            <div class="account-section-head">
+              <span>Caixa</span>
+              <h3>Pedidos recebidos</h3>
+              <p>Pedidos enviados pelo formulario publico aparecem aqui quando as regras do Firestore permitem leitura.</p>
+            </div>
+            <div class="lead-list">
+              ${leads.length ? leads.map(leadCardMarkup).join("") : `<p class="mock-empty">Nenhum pedido recebido ainda.</p>`}
+            </div>
+          </section>
+
           <section class="${accountTabPanelClass("aparencia")}" data-account-tab-panel="aparencia">
             <div class="account-section-head">
               <span>Aparencia</span>
@@ -1416,6 +1926,9 @@ const renderDashboard = (root, message = "") => {
               <label class="account-check"><input name="showBudget" type="checkbox" ${page.showBudget ? "checked" : ""} /> Mostrar Orcamento</label>
               <label class="account-check"><input name="showContact" type="checkbox" ${page.showContact ? "checked" : ""} /> Mostrar Contato</label>
             </div>
+            <div class="section-order-manager">
+              ${orderedSections.map(sectionEditorMarkup).join("")}
+            </div>
           </section>
 
           <div class="account-editor-actions">
@@ -1447,15 +1960,18 @@ const initializeAccount = () => {
     if (accountSubmitInProgress) return;
 
     appState.user = user;
+    refreshAccountLabels();
 
     if (!user) {
       appState.profile = null;
+      stopWatchingLeads();
       renderAuthForms(root);
       return;
     }
 
     try {
       await readOwnProfile(user);
+      watchOwnLeads(user.uid, root);
       renderDashboard(root);
       shell.classList.remove("is-open");
     } catch (error) {
@@ -1479,7 +1995,9 @@ const initializeAccount = () => {
         const formData = new FormData(loginForm);
         const credential = await appState.modules.auth.signInWithEmailAndPassword(appState.auth, emailForAuth(formData.get("email")), String(formData.get("password") || ""));
         appState.user = credential.user;
+        refreshAccountLabels();
         await readOwnProfile(credential.user);
+        watchOwnLeads(credential.user.uid, root);
         renderDashboard(root, "Login realizado.");
         shell.classList.add("is-open");
         loginForm.reset();
@@ -1503,6 +2021,7 @@ const initializeAccount = () => {
           createdAt: timestamp(),
         };
         appState.user = credential.user;
+        refreshAccountLabels();
         await appState.modules.firestore.setDoc(userDoc(credential.user.uid), profile);
 
         if (profile.role === DEFAULT_ACCOUNT_ROLE) {
@@ -1515,6 +2034,7 @@ const initializeAccount = () => {
         }
 
         appState.profile = profile;
+        watchOwnLeads(credential.user.uid, root);
         renderDashboard(root, "Cadastro criado.");
         shell.classList.add("is-open");
         registerForm.reset();
@@ -1545,6 +2065,9 @@ const initializeAccount = () => {
     const publishNow = event.target.closest("[data-publish-now]");
     const addPhotoButton = event.target.closest("[data-add-photo]");
     const addServiceButton = event.target.closest("[data-add-service]");
+    const movePhotoButton = event.target.closest("[data-move-photo]");
+    const moveServiceButton = event.target.closest("[data-move-service]");
+    const moveSectionButton = event.target.closest("[data-move-section]");
 
     if (tabButton) {
       appState.accountTab = tabButton.dataset.accountTab || "inicio";
@@ -1557,6 +2080,27 @@ const initializeAccount = () => {
       const published = form?.querySelector('input[name="published"]');
       if (published) published.checked = true;
       form?.requestSubmit();
+      return;
+    }
+
+    if (movePhotoButton) {
+      if (moveEditorItem(movePhotoButton, "[data-photo-editor]", Number(movePhotoButton.dataset.movePhoto))) {
+        setAccountMessage(root, "Ordem das fotos alterada. Salve o rascunho para publicar a mudanca.");
+      }
+      return;
+    }
+
+    if (moveServiceButton) {
+      if (moveEditorItem(moveServiceButton, "[data-service-editor]", Number(moveServiceButton.dataset.moveService))) {
+        setAccountMessage(root, "Ordem dos servicos alterada. Salve o rascunho para publicar a mudanca.");
+      }
+      return;
+    }
+
+    if (moveSectionButton) {
+      if (moveEditorItem(moveSectionButton, "[data-section-editor]", Number(moveSectionButton.dataset.moveSection))) {
+        setAccountMessage(root, "Ordem das secoes alterada. Salve o rascunho para publicar a mudanca.");
+      }
       return;
     }
 
@@ -1606,7 +2150,9 @@ const initializeAccount = () => {
         provider.setCustomParameters({ prompt: "select_account" });
         const credential = await appState.modules.auth.signInWithPopup(appState.auth, provider);
         appState.user = credential.user;
+        refreshAccountLabels();
         await readOrCreateProfile(credential.user);
+        watchOwnLeads(credential.user.uid, root);
         renderDashboard(root, "Login com Google realizado.");
         shell.classList.add("is-open");
       } catch (error) {
@@ -1620,13 +2166,17 @@ const initializeAccount = () => {
 
     if (logout) {
       await appState.modules.auth.signOut(appState.auth);
+      appState.user = null;
+      stopWatchingLeads();
+      refreshAccountLabels();
       shell.classList.remove("is-open");
     }
 
     if (addPhotoButton) {
       const url = cleanText(root.querySelector("[data-new-photo-url]")?.value);
-      if (!url) {
-        setAccountMessage(root, "Informe a URL da foto antes de adicionar.");
+      const file = root.querySelector("[data-new-photo-file]")?.files?.[0];
+      if (!url && !file) {
+        setAccountMessage(root, "Informe a URL ou escolha um arquivo de imagem antes de adicionar.");
         return;
       }
 
@@ -1683,6 +2233,8 @@ const initializeAccount = () => {
 
 renderLayout();
 initializeMenus();
+initializeDirectoryControls();
+initializeLightbox();
 renderDefaultPortfolio();
 renderCategoryPages();
 initializeBudgetForm();
