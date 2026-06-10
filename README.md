@@ -19,6 +19,9 @@ Site estatico pronto para publicar na Vercel, agora separado por paginas.
 
 - Troque `Mari Lopes Fotografia` pelo nome real do fotografo ou estudio.
 - Edite header, footer, WhatsApp, email e albuns no arquivo `script.js`.
+- Para trocar o WhatsApp principal, altere `contact.whatsapp` no topo de `script.js`, usando o formato internacional sem sinais, exemplo `5548999999999`.
+- Para personalizar a frase inicial da mensagem enviada pelo formulario de orcamento, altere `contact.whatsappIntro` no topo de `script.js`.
+- Para mudar a estrutura completa da mensagem do WhatsApp, edite a lista `message` dentro da funcao `initializeBudgetForm` em `script.js`.
 - Substitua as fotos de `assets/marilopes` pelas fotos reais do portfolio.
 - Atualize tambem os links diretos de WhatsApp em `contato.html` e `reservas.html`, se aparecerem.
 - Atualize o e-mail `marilopesfotografia@gmail.com`.

@@ -6,6 +6,7 @@ const contact = {
   email: "marilopesfotografia@gmail.com",
   location: "Florianópolis - SC",
   whatsapp: "5592999999999",
+  whatsappIntro: "Olá! Gostaria de solicitar um orçamento.",
 };
 
 const albums = [
@@ -392,7 +393,7 @@ const initializeBudgetForm = () => {
     event.preventDefault();
     const formData = new FormData(budgetForm);
     const message = [
-      "Olá! Gostaria de solicitar um orçamento.",
+      contact.whatsappIntro,
       "",
       `Nome: ${formData.get("nome") || ""}`,
       `Telefone: ${formData.get("telefone") || ""}`,
