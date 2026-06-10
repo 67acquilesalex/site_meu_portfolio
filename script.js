@@ -111,6 +111,7 @@ const appState = {
   modules: {},
   photographers: [],
   profile: null,
+  storage: null,
   user: null,
 };
 
@@ -118,6 +119,12 @@ const DEFAULT_ACCOUNT_ROLE = "fotografo";
 const albumBySlug = new Map(albums.map((album) => [album.slug, album]));
 const currentSlug = () => location.pathname.split("/").pop().replace(".html", "") || "index";
 const cleanText = (value, fallback = "") => String(value || fallback).trim();
+const buildWhatsappUrl = (phone, message = "") => {
+  const number = String(phone || "").replace(/\D/g, "");
+  const text = cleanText(message);
+  if (!number) return "";
+  return `https://wa.me/${number}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
+};
 const normalizeEmail = (value) => {
   let email = cleanText(value)
     .normalize("NFKC")
@@ -136,6 +143,11 @@ const emailForAuth = (value) => {
   return email;
 };
 const splitList = (value) => cleanText(value).split(",").map((item) => item.trim()).filter(Boolean);
+const imageExtension = (file) => {
+  const fromType = String(file?.type || "").split("/")[1];
+  const fromName = String(file?.name || "").split(".").pop();
+  return (fromType || fromName || "jpg").replace(/[^a-z0-9]/gi, "").toLowerCase() || "jpg";
+};
 const escapeHtml = (value) =>
   String(value || "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
@@ -150,6 +162,7 @@ const authErrorMessage = (error) => {
     "auth/email-already-in-use": "Este email já está cadastrado. Entre com a senha, use Google ou redefina a senha.",
     "auth/invalid-email": "Confira o email. Remova espacos ou caracteres extras e tente novamente.",
     "local/invalid-email": "Digite o email completo, exemplo: nome@gmail.com.",
+    "local/photo-required": "Escolha uma imagem ou informe uma URL de imagem.",
     "auth/invalid-credential": "Email ou senha incorretos. Se a conta foi criada com Google, use o botão Google. Se esqueceu a senha, redefina abaixo.",
     "auth/user-not-found": "Nao existe conta com este email.",
     "auth/wrong-password": "Senha incorreta.",
@@ -166,6 +179,9 @@ const authErrorMessage = (error) => {
     "auth/invalid-api-key": "A chave do Firebase é inválida. Copie novamente a configuração Web App do seu projeto Firebase.",
     "auth/operation-not-allowed": "Este tipo de login ainda nao esta ativado no Firebase Authentication.",
     "auth/app-not-authorized": "Este dominio nao esta autorizado para usar esta chave do Firebase.",
+    "local/not-image": "Escolha um arquivo de imagem.",
+    "storage/not-configured": "Firebase Storage ainda nao esta configurado para upload de imagens.",
+    "storage/unauthorized": "O Firebase Storage negou o upload. Publique as regras do Storage.",
     "permission-denied": "O Firestore negou a escrita. Publique as regras do banco de dados no Firebase.",
   };
   if (String(error?.message || "").includes("Missing or insufficient permissions")) {
@@ -367,7 +383,7 @@ const renderPhotographerDetail = (gallery, photographer) => {
     <p>${escapeHtml(photographer.bio || "")}</p>
     <div class="profile-links">
       ${photographer.city ? `<span>${escapeHtml(photographer.city)}</span>` : ""}
-      ${photographer.whatsapp ? `<a href="https://wa.me/${photographer.whatsapp.replace(/\D/g, "")}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ""}
+      ${photographer.whatsapp ? `<a href="${escapeHtml(buildWhatsappUrl(photographer.whatsapp, photographer.whatsappIntro))}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ""}
       ${photographer.instagram ? `<a href="${escapeHtml(photographer.instagram)}" target="_blank" rel="noopener noreferrer">Instagram</a>` : ""}
     </div>
   `;
@@ -403,7 +419,7 @@ const initializeBudgetForm = () => {
       `Mensagem: ${formData.get("mensagem") || ""}`,
     ].join("\n");
 
-    window.open(`https://wa.me/${contact.whatsapp}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+    window.open(buildWhatsappUrl(contact.whatsapp, message), "_blank", "noopener,noreferrer");
   });
 };
 
@@ -411,16 +427,18 @@ const connectFirebase = async () => {
   if (!hasFirebaseConfig) return false;
 
   try {
-    const [appModule, authModule, firestoreModule] = await Promise.all([
+    const [appModule, authModule, firestoreModule, storageModule] = await Promise.all([
       import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"),
       import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js"),
       import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js"),
     ]);
 
     const app = appModule.initializeApp(firebaseConfig);
     appState.auth = authModule.getAuth(app);
     appState.db = firestoreModule.getFirestore(app);
-    appState.modules = { auth: authModule, firestore: firestoreModule };
+    appState.storage = storageModule.getStorage(app);
+    appState.modules = { auth: authModule, firestore: firestoreModule, storage: storageModule };
     appState.firebaseReady = true;
   } catch (error) {
     appState.firebaseError = authErrorMessage(error);
@@ -434,6 +452,30 @@ const userDoc = (uid) => appState.modules.firestore.doc(appState.db, "users", ui
 const photographerDoc = (uid) => appState.modules.firestore.doc(appState.db, "photographers", uid);
 const directoryDoc = () => appState.modules.firestore.doc(appState.db, "platform", "directory");
 const timestamp = () => appState.modules.firestore.serverTimestamp();
+
+const uploadImageFile = async (file, folder) => {
+  if (!file?.size) return null;
+  if (!file.type.startsWith("image/")) throw { code: "local/not-image" };
+  if (!appState.storage || !appState.modules.storage) throw { code: "storage/not-configured" };
+
+  const path = `photographers/${appState.user.uid}/${folder}/${Date.now()}-${crypto.randomUUID()}.${imageExtension(file)}`;
+  const storageRef = appState.modules.storage.ref(appState.storage, path);
+  await appState.modules.storage.uploadBytes(storageRef, file, { contentType: file.type });
+  return {
+    url: await appState.modules.storage.getDownloadURL(storageRef),
+    storagePath: path,
+  };
+};
+
+const deleteStoragePath = async (path) => {
+  if (!path || !appState.storage || !appState.modules.storage) return;
+
+  try {
+    await appState.modules.storage.deleteObject(appState.modules.storage.ref(appState.storage, path));
+  } catch (error) {
+    if (error?.code !== "storage/object-not-found") console.warn("Could not delete image:", error);
+  }
+};
 
 const setAccountMessage = (root, message) => {
   const node = root.querySelector("[data-account-message]");
@@ -475,6 +517,7 @@ const saveDirectoryProfile = async (uid, profile) => {
     city: profile.city || "",
     bio: profile.bio || "",
     whatsapp: profile.whatsapp || "",
+    whatsappIntro: profile.whatsappIntro || "",
     instagram: profile.instagram || "",
     coverUrl: profile.coverUrl || "",
     photos: Array.isArray(profile.photos) ? profile.photos : [],
@@ -520,6 +563,7 @@ const readOwnProfile = async (user) => {
           city: "",
           bio: "",
           whatsapp: "",
+          whatsappIntro: contact.whatsappIntro,
           instagram: "",
           coverUrl: "",
           categories: [],
@@ -549,6 +593,7 @@ const createDefaultProfile = async (user) => {
           city: "",
           bio: "",
           whatsapp: "",
+          whatsappIntro: contact.whatsappIntro,
           instagram: "",
           coverUrl: "",
           categories: [],
@@ -577,14 +622,18 @@ const readOrCreateProfile = async (user) => {
 const savePhotographerProfile = async (form) => {
   const formData = new FormData(form);
   const currentPhotos = appState.profile?.photographer?.photos || [];
+  const currentProfile = appState.profile?.photographer || {};
+  const coverUpload = await uploadImageFile(formData.get("coverFile"), "covers");
   const nextProfile = {
-    ...appState.profile.photographer,
+    ...currentProfile,
     displayName: cleanText(formData.get("displayName")),
     city: cleanText(formData.get("city")),
     bio: cleanText(formData.get("bio")),
     whatsapp: cleanText(formData.get("whatsapp")),
+    whatsappIntro: cleanText(formData.get("whatsappIntro"), contact.whatsappIntro),
     instagram: cleanText(formData.get("instagram")),
-    coverUrl: cleanText(formData.get("coverUrl")),
+    coverUrl: coverUpload?.url || cleanText(formData.get("coverUrl")) || currentProfile.coverUrl || "",
+    coverStoragePath: coverUpload?.storagePath || currentProfile.coverStoragePath || "",
     categories: splitList(formData.get("categories")),
     published: formData.get("published") === "on",
     photos: currentPhotos,
@@ -593,20 +642,31 @@ const savePhotographerProfile = async (form) => {
 
   await appState.modules.firestore.setDoc(photographerDoc(appState.user.uid), nextProfile, { merge: true });
   await saveDirectoryProfile(appState.user.uid, nextProfile);
+  if (coverUpload?.storagePath && currentProfile.coverStoragePath) await deleteStoragePath(currentProfile.coverStoragePath);
   appState.profile.photographer = nextProfile;
 };
 
 const addPhoto = async (form) => {
   const formData = new FormData(form);
-  const url = cleanText(formData.get("photoUrl"));
-  if (!url) return;
+  const photoUpload = await uploadImageFile(formData.get("photoFile"), "photos");
+  const url = photoUpload?.url || cleanText(formData.get("photoUrl"));
+  if (!url) throw { code: "local/photo-required" };
 
   const current = appState.profile?.photographer || {};
   const photos = Array.isArray(current.photos) ? current.photos : [];
   const nextProfile = {
     ...current,
     coverUrl: current.coverUrl || url,
-    photos: [...photos, { url, title: cleanText(formData.get("photoTitle"), "Foto"), createdAt: Date.now() }],
+    coverStoragePath: current.coverStoragePath || photoUpload?.storagePath || "",
+    photos: [
+      ...photos,
+      {
+        url,
+        storagePath: photoUpload?.storagePath || "",
+        title: cleanText(formData.get("photoTitle"), "Foto"),
+        createdAt: Date.now(),
+      },
+    ],
     updatedAt: timestamp(),
   };
 
@@ -625,11 +685,13 @@ const removePhoto = async (index) => {
     ...current,
     photos,
     coverUrl: coverWasRemoved ? photos[0]?.url || "" : current.coverUrl || photos[0]?.url || "",
+    coverStoragePath: coverWasRemoved ? photos[0]?.storagePath || "" : current.coverStoragePath || "",
     updatedAt: timestamp(),
   };
 
   await appState.modules.firestore.setDoc(photographerDoc(appState.user.uid), nextProfile, { merge: true });
   await saveDirectoryProfile(appState.user.uid, nextProfile);
+  await deleteStoragePath(removed?.storagePath);
   appState.profile.photographer = nextProfile;
 };
 
@@ -718,16 +780,19 @@ const renderDashboard = (root, message = "") => {
         <label>Cidade<input name="city" value="${escapeHtml(photographer.city || "")}" placeholder="Manaus - AM" /></label>
         <label>Bio<textarea name="bio" rows="3" placeholder="Fale sobre seu estilo e atendimento">${escapeHtml(photographer.bio || "")}</textarea></label>
         <label>WhatsApp<input name="whatsapp" value="${escapeHtml(photographer.whatsapp || "")}" placeholder="5592999999999" /></label>
+        <label>Mensagem do WhatsApp<textarea name="whatsappIntro" rows="3" placeholder="Mensagem que abre quando alguem clica no WhatsApp">${escapeHtml(photographer.whatsappIntro || contact.whatsappIntro)}</textarea></label>
         <label>Instagram<input name="instagram" value="${escapeHtml(photographer.instagram || "")}" placeholder="https://instagram.com/seuperfil" /></label>
         <label>Categorias<input name="categories" value="${escapeHtml((photographer.categories || []).join(", "))}" placeholder="Casamento, gestante, eventos" /></label>
-        <label>Foto de capa por URL<input name="coverUrl" value="${escapeHtml(photographer.coverUrl || "")}" placeholder="https://..." /></label>
+        <label>Foto de capa<input name="coverFile" type="file" accept="image/*" /></label>
+        <label>URL de capa opcional<input name="coverUrl" value="${escapeHtml(photographer.coverUrl || "")}" placeholder="https://..." /></label>
         <label class="account-check"><input name="published" type="checkbox" ${photographer.published ? "checked" : ""} /> Publicar meu portfólio</label>
         <button type="submit">Salvar perfil</button>
       </form>
       <form class="account-form compact" data-photo-form>
         <h3>Adicionar foto</h3>
         <label>Titulo<input name="photoTitle" placeholder="Ensaio externo" /></label>
-        <label>URL da imagem<input name="photoUrl" type="url" placeholder="https://..." required /></label>
+        <label>Imagem<input name="photoFile" type="file" accept="image/*" /></label>
+        <label>URL opcional da imagem<input name="photoUrl" type="url" placeholder="https://..." /></label>
         <button type="submit">Adicionar foto</button>
       </form>
       <div class="photo-manager">
@@ -737,7 +802,7 @@ const renderDashboard = (root, message = "") => {
             <span>${escapeHtml(photo.title || "Foto")}</span>
             <button type="button" data-remove-photo="${index}">Remover</button>
           </article>
-        `).join("") || `<p class="mock-empty">Adicione links de fotos para montar seu portfólio.</p>`}
+        `).join("") || `<p class="mock-empty">Adicione fotos para montar seu portfólio.</p>`}
       </div>
       <button type="button" data-account-logout>Sair</button>
       <p class="admin-message" data-account-message>${escapeHtml(message)}</p>
@@ -824,6 +889,7 @@ const initializeAccount = () => {
             city: "",
             bio: "",
             whatsapp: "",
+            whatsappIntro: contact.whatsappIntro,
             instagram: "",
             coverUrl: "",
             categories: [],

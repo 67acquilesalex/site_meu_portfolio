@@ -15,17 +15,18 @@ Site estatico pronto para publicar na Vercel, agora separado por paginas.
 - `orcamento.html`: Formulario de orcamento
 - `contato.html`: Links de contato
 
-## Como editar
+## Como o fotografo edita sem codigo
 
-- Troque `Mari Lopes Fotografia` pelo nome real do fotografo ou estudio.
-- Edite header, footer, WhatsApp, email e albuns no arquivo `script.js`.
-- Para trocar o WhatsApp principal, altere `contact.whatsapp` no topo de `script.js`, usando o formato internacional sem sinais, exemplo `5548999999999`.
-- Para personalizar a frase inicial da mensagem enviada pelo formulario de orcamento, altere `contact.whatsappIntro` no topo de `script.js`.
-- Para mudar a estrutura completa da mensagem do WhatsApp, edite a lista `message` dentro da funcao `initializeBudgetForm` em `script.js`.
-- Substitua as fotos de `assets/marilopes` pelas fotos reais do portfolio.
-- Atualize tambem os links diretos de WhatsApp em `contato.html` e `reservas.html`, se aparecerem.
-- Atualize o e-mail `marilopesfotografia@gmail.com`.
-- Ajuste os textos de sobre, projetos, portfolio e contato.
+Depois do Firebase configurado e do site publicado, o fotografo usa o botao `Conta` no proprio site:
+
+- Criar conta ou entrar com email/senha ou Google.
+- Editar nome publico, cidade, bio, WhatsApp, mensagem do WhatsApp, Instagram e categorias.
+- Enviar foto de capa pelo computador.
+- Adicionar fotos pelo computador.
+- Remover fotos.
+- Marcar `Publicar meu portfolio` para aparecer na galeria publica.
+
+O fotografo final nao precisa editar HTML, CSS, JavaScript ou Vercel para trocar fotos, contatos e textos principais do perfil.
 
 ## Publicar na Vercel
 
@@ -41,14 +42,13 @@ Depois do deploy, conecte o dominio da Hostinger em `Project Settings > Domains`
 
 ## Plataforma com Firebase
 
-O site usa Firebase no plano Spark, sem Firebase Storage:
+O site usa Firebase:
 
 - Firebase Auth faz cadastro e login por e-mail e senha.
 - Firestore salva usuarios em `users/{uid}`.
-- Fotógrafos salvam perfil, contatos e links de fotos em `photographers/{uid}`.
+- Fotografos salvam perfil, contatos, mensagem de WhatsApp e fotos em `photographers/{uid}`.
 - A listagem publica dos fotografos fica em `platform/directory`.
-- As imagens devem ser adicionadas por URL externa, por exemplo Cloudinary, Imgur ou outro host de imagens.
-- O Firebase Storage nao e usado porque exige upgrade do projeto.
+- Firebase Storage salva uploads reais de capa e fotos.
 
 Para ativar:
 
@@ -57,8 +57,9 @@ Para ativar:
 3. Para o botao Google funcionar, ative tambem Authentication > Sign-in method > Google.
 4. Os usuarios podem ser criados pelo proprio site.
 5. Ative Firestore Database.
-6. Copie a configuracao Web App do Firebase para `firebase-config.js`.
-7. Publique na Vercel.
+6. Ative Firebase Storage.
+7. Copie a configuracao Web App do Firebase para `firebase-config.js`.
+8. Publique na Vercel.
 
 Se aparecer `auth/api-key-not-valid`, a `apiKey` em `firebase-config.js` nao pertence a um Web App valido do Firebase. No console do Firebase, abra `Project settings > General > Your apps`, selecione ou crie um app Web e copie o bloco `firebaseConfig` completo novamente.
 
@@ -82,6 +83,21 @@ service cloud.firestore {
     match /photographers/{userId} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+Regras iniciais sugeridas para Firebase Storage:
+
+```js
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /photographers/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
