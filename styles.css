@@ -1206,7 +1206,9 @@ button {
     padding: 34px 24px;
   }
 
-  .gallery-item {
+  .gallery-item,
+  .gallery-item.wide {
+    aspect-ratio: auto;
     min-height: 280px;
   }
 }
