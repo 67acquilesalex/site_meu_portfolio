@@ -20,7 +20,8 @@ Site estatico pronto para publicar na Vercel, agora separado por paginas.
 Depois do Firebase configurado e do site publicado, o fotografo usa o botao `Conta` no proprio site:
 
 - Criar conta ou entrar com email/senha ou Google.
-- Editar nome publico, cidade, bio, WhatsApp, mensagem do WhatsApp, Instagram e categorias.
+- Editar nome publico, email publico, cidade, bio, WhatsApp, mensagem do WhatsApp, Instagram e categorias.
+- Enviar logo pelo computador.
 - Enviar foto de capa pelo computador.
 - Adicionar fotos pelo computador.
 - Remover fotos.

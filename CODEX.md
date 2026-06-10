@@ -15,7 +15,8 @@ Current admin behavior uses Firebase directly from the static site:
 - Firebase Auth for admin login.
 - Firestore for album/photo metadata, ordering, and visibility.
 - Firebase Storage for real image uploads and deletes.
-- WhatsApp number and WhatsApp message should be editable from the account/profile UI and saved in Firestore.
+- Brand name, logo, public email, WhatsApp number, and WhatsApp message should be editable from the account/profile UI and saved in Firestore.
+- Published photographer profile data should drive the public header, footer, budget WhatsApp link, and portfolio pages without code edits.
 - Keep the current visual design and inline admin UX while replacing only the data/upload layer.
 
 A future Next.js migration can improve image optimization with Next.js Image, responsive sizes, lazy loading, and production caching, but it must keep the same inline editing model.

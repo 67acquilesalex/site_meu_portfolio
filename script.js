@@ -198,15 +198,33 @@ const navItem = (href, label, slugs) => {
   return `<a${active} href="${href}">${label}</a>`;
 };
 
+const publishedSiteProfile = () => appState.photographers.find((photographer) => photographer.published) || null;
+const siteSettings = () => {
+  const profile = publishedSiteProfile();
+  return {
+    brand: profile?.displayName || contact.brand,
+    logo: profile ? profile.logoUrl || "" : contact.logo,
+    email: profile?.publicEmail || contact.email,
+    location: profile?.city || contact.location,
+    whatsapp: profile?.whatsapp || contact.whatsapp,
+    whatsappIntro: profile?.whatsappIntro || contact.whatsappIntro,
+  };
+};
+
 const renderLayout = () => {
+  const site = siteSettings();
+  const brandHtml = site.logo
+    ? `<img src="${escapeHtml(site.logo)}" alt="${escapeHtml(site.brand)}" width="239" height="82" />`
+    : `<span class="brand-text">${escapeHtml(site.brand)}</span>`;
+
   document.querySelectorAll("[data-site-header], .site-header").forEach((header) => {
     const isServicePage = albumBySlug.has(currentSlug());
     header.className = "site-header";
     header.dataset.siteHeader = "";
     header.innerHTML = `
       <div class="site-frame header-frame">
-        <a class="brand" href="index.html" aria-label="${contact.brand}">
-          <img src="${contact.logo}" alt="${contact.brand}" width="239" height="82" />
+        <a class="brand" href="index.html" aria-label="${escapeHtml(site.brand)}">
+          ${brandHtml}
         </a>
         <button class="nav-toggle" type="button" aria-label="Abrir menu" aria-expanded="false">
           <span></span><span></span><span></span>
@@ -233,8 +251,8 @@ const renderLayout = () => {
     footer.dataset.siteFooter = "";
     footer.innerHTML = `
       <div class="site-frame footer-frame">
-        <p>${contact.brand}</p>
-        <p>${contact.location} | ${contact.email}</p>
+        <p>${escapeHtml(site.brand)}</p>
+        <p>${escapeHtml(site.location)} | ${escapeHtml(site.email)}</p>
       </div>
     `;
   });
@@ -258,14 +276,17 @@ const initializeMenus = () => {
     });
   });
 
-  document.addEventListener("click", (event) => {
-    document.querySelectorAll(".menu-group.open").forEach((group) => {
-      if (!group.contains(event.target)) {
-        group.classList.remove("open");
-        group.querySelector("button")?.setAttribute("aria-expanded", "false");
-      }
+  if (!document.body.dataset.menuCloseBound) {
+    document.body.dataset.menuCloseBound = "true";
+    document.addEventListener("click", (event) => {
+      document.querySelectorAll(".menu-group.open").forEach((group) => {
+        if (!group.contains(event.target)) {
+          group.classList.remove("open");
+          group.querySelector("button")?.setAttribute("aria-expanded", "false");
+        }
+      });
     });
-  });
+  }
 };
 
 const albumCard = (album, index) => {
@@ -408,8 +429,9 @@ const initializeBudgetForm = () => {
   budgetForm.addEventListener("submit", (event) => {
     event.preventDefault();
     const formData = new FormData(budgetForm);
+    const site = siteSettings();
     const message = [
-      contact.whatsappIntro,
+      site.whatsappIntro,
       "",
       `Nome: ${formData.get("nome") || ""}`,
       `Telefone: ${formData.get("telefone") || ""}`,
@@ -419,7 +441,7 @@ const initializeBudgetForm = () => {
       `Mensagem: ${formData.get("mensagem") || ""}`,
     ].join("\n");
 
-    window.open(buildWhatsappUrl(contact.whatsapp, message), "_blank", "noopener,noreferrer");
+    window.open(buildWhatsappUrl(site.whatsapp, message), "_blank", "noopener,noreferrer");
   });
 };
 
@@ -504,6 +526,8 @@ const watchPhotographers = () => {
   appState.modules.firestore.onSnapshot(directoryDoc(), (snapshot) => {
     const data = snapshot.data();
     appState.photographers = Array.isArray(data?.photographers) ? data.photographers : [];
+    renderLayout();
+    initializeMenus();
     renderPhotographerCards();
   }, () => renderDefaultPortfolio());
 };
@@ -514,11 +538,13 @@ const saveDirectoryProfile = async (uid, profile) => {
   const publicProfile = {
     uid,
     displayName: profile.displayName || "",
+    publicEmail: profile.publicEmail || "",
     city: profile.city || "",
     bio: profile.bio || "",
     whatsapp: profile.whatsapp || "",
     whatsappIntro: profile.whatsappIntro || "",
     instagram: profile.instagram || "",
+    logoUrl: profile.logoUrl || "",
     coverUrl: profile.coverUrl || "",
     photos: Array.isArray(profile.photos) ? profile.photos : [],
     published: Boolean(profile.published),
@@ -560,11 +586,13 @@ const readOwnProfile = async (user) => {
       ? photographerSnapshot.data()
       : {
           displayName: appState.profile.name || "",
+          publicEmail: appState.profile.email || "",
           city: "",
           bio: "",
           whatsapp: "",
           whatsappIntro: contact.whatsappIntro,
           instagram: "",
+          logoUrl: "",
           coverUrl: "",
           categories: [],
           photos: [],
@@ -590,11 +618,13 @@ const createDefaultProfile = async (user) => {
       ? photographerSnapshot.data()
       : {
           displayName: profile.name,
+          publicEmail: profile.email || "",
           city: "",
           bio: "",
           whatsapp: "",
           whatsappIntro: contact.whatsappIntro,
           instagram: "",
+          logoUrl: "",
           coverUrl: "",
           categories: [],
           photos: [],
@@ -623,15 +653,19 @@ const savePhotographerProfile = async (form) => {
   const formData = new FormData(form);
   const currentPhotos = appState.profile?.photographer?.photos || [];
   const currentProfile = appState.profile?.photographer || {};
+  const logoUpload = await uploadImageFile(formData.get("logoFile"), "logos");
   const coverUpload = await uploadImageFile(formData.get("coverFile"), "covers");
   const nextProfile = {
     ...currentProfile,
     displayName: cleanText(formData.get("displayName")),
+    publicEmail: cleanText(formData.get("publicEmail"), appState.profile?.email || ""),
     city: cleanText(formData.get("city")),
     bio: cleanText(formData.get("bio")),
     whatsapp: cleanText(formData.get("whatsapp")),
     whatsappIntro: cleanText(formData.get("whatsappIntro"), contact.whatsappIntro),
     instagram: cleanText(formData.get("instagram")),
+    logoUrl: logoUpload?.url || cleanText(formData.get("logoUrl")) || currentProfile.logoUrl || "",
+    logoStoragePath: logoUpload?.storagePath || currentProfile.logoStoragePath || "",
     coverUrl: coverUpload?.url || cleanText(formData.get("coverUrl")) || currentProfile.coverUrl || "",
     coverStoragePath: coverUpload?.storagePath || currentProfile.coverStoragePath || "",
     categories: splitList(formData.get("categories")),
@@ -642,6 +676,7 @@ const savePhotographerProfile = async (form) => {
 
   await appState.modules.firestore.setDoc(photographerDoc(appState.user.uid), nextProfile, { merge: true });
   await saveDirectoryProfile(appState.user.uid, nextProfile);
+  if (logoUpload?.storagePath && currentProfile.logoStoragePath) await deleteStoragePath(currentProfile.logoStoragePath);
   if (coverUpload?.storagePath && currentProfile.coverStoragePath) await deleteStoragePath(currentProfile.coverStoragePath);
   appState.profile.photographer = nextProfile;
 };
@@ -777,12 +812,15 @@ const renderDashboard = (root, message = "") => {
       </div>
       <form class="account-form" data-photographer-form>
         <label>Nome público<input name="displayName" value="${escapeHtml(photographer.displayName || profile.name || "")}" required /></label>
+        <label>Email público<input name="publicEmail" type="email" value="${escapeHtml(photographer.publicEmail || profile.email || "")}" placeholder="contato@seudominio.com" /></label>
         <label>Cidade<input name="city" value="${escapeHtml(photographer.city || "")}" placeholder="Manaus - AM" /></label>
         <label>Bio<textarea name="bio" rows="3" placeholder="Fale sobre seu estilo e atendimento">${escapeHtml(photographer.bio || "")}</textarea></label>
         <label>WhatsApp<input name="whatsapp" value="${escapeHtml(photographer.whatsapp || "")}" placeholder="5592999999999" /></label>
         <label>Mensagem do WhatsApp<textarea name="whatsappIntro" rows="3" placeholder="Mensagem que abre quando alguem clica no WhatsApp">${escapeHtml(photographer.whatsappIntro || contact.whatsappIntro)}</textarea></label>
         <label>Instagram<input name="instagram" value="${escapeHtml(photographer.instagram || "")}" placeholder="https://instagram.com/seuperfil" /></label>
         <label>Categorias<input name="categories" value="${escapeHtml((photographer.categories || []).join(", "))}" placeholder="Casamento, gestante, eventos" /></label>
+        <label>Logo<input name="logoFile" type="file" accept="image/*" /></label>
+        <label>URL de logo opcional<input name="logoUrl" value="${escapeHtml(photographer.logoUrl || "")}" placeholder="https://..." /></label>
         <label>Foto de capa<input name="coverFile" type="file" accept="image/*" /></label>
         <label>URL de capa opcional<input name="coverUrl" value="${escapeHtml(photographer.coverUrl || "")}" placeholder="https://..." /></label>
         <label class="account-check"><input name="published" type="checkbox" ${photographer.published ? "checked" : ""} /> Publicar meu portfólio</label>
@@ -886,11 +924,13 @@ const initializeAccount = () => {
         if (profile.role === DEFAULT_ACCOUNT_ROLE) {
           const photographerProfile = {
             displayName: profile.name,
+            publicEmail: profile.email || "",
             city: "",
             bio: "",
             whatsapp: "",
             whatsappIntro: contact.whatsappIntro,
             instagram: "",
+            logoUrl: "",
             coverUrl: "",
             categories: [],
             photos: [],
